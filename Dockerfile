@@ -8,6 +8,8 @@
 # the version in git so Dependabot can raise upgrade PRs, and gives a home
 # for the baked-in "lucos" theme.
 FROM lscr.io/linuxserver/bookstack:26.05.2
+ARG VERSION
+ENV VERSION=$VERSION
 
 # Theme source lives OUTSIDE /config on purpose: /config is a persistent
 # volume, so anything baked into the image under a /config-backed path would
