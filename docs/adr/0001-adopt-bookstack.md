@@ -63,6 +63,21 @@ Self-host **BookStack** in the lucos estate as the system `lucos_worlds`.
 - Group/role sync (`OIDC_USER_TO_GROUPS`) is available but unnecessary for one user —
   left off.
 
+> **Amendment (2026-07-08, [#17](https://github.com/lucas42/lucos_worlds/issues/17)):**
+> Group/role sync is now enabled. lucas42 asked whether aithne scopes could drive real
+> BookStack RBAC (admin/editor/viewer) rather than a single catch-all login gate.
+> Investigation found aithne's OIDC id_token already carries an `effectiveScopes` claim
+> (`scopes`) purpose-built for a generic OIDC RP to gate on (`lucos_aithne`#277) — no
+> aithne code changes needed. `docker-compose.yml` now sets `OIDC_USER_TO_GROUPS=true`,
+> `OIDC_GROUPS_CLAIM=scopes`, `OIDC_ADDITIONAL_SCOPES=worlds:admin`,
+> `OIDC_REMOVE_FROM_GROUPS=true`, and `lucos_auth_scopes` gained a `worlds:admin` scope.
+> Right-sized to a single scope for the single current user; `worlds:editor` /
+> `worlds:viewer` are deferred until a real second-privilege user appears
+> (default-deny). Two steps remain manual, outside this repo: granting `worlds:admin`
+> to lucas42's aithne principal, and BookStack-side role setup (a role matching the
+> `worlds:admin` claim value, default registration role set to none) via the BookStack
+> Admin Settings UI — there is no env var for either.
+
 ### 3. Deployment shape
 
 - **`docker-compose.yml`** with two services:
