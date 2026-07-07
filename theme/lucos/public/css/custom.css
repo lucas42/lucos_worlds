@@ -1,0 +1,10 @@
+/*
+ * Placeholder stylesheet for the lucos_worlds "lucos" theme.
+ *
+ * This file exists to prove the custom-CSS injection mechanism works
+ * end-to-end (baked into the image -> synced into BookStack's persistent
+ * /config volume -> served at /theme/lucos/css/custom.css -> linked from
+ * custom-head.blade.php). The actual "fantasy" styling (parchment
+ * background, cursive headings, etc.) is deliberately NOT here — it's
+ * scoped to lucas42/lucos_worlds#7.
+ */
