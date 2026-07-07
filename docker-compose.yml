@@ -1,0 +1,57 @@
+services:
+  lucos_worlds_web:
+    build: .
+    image: lucas42/lucos_worlds_web:${VERSION:-latest}
+    container_name: lucos_worlds_web
+    environment:
+      - PORT
+      - APP_URL=${APP_ORIGIN}
+      - APP_KEY
+      - APP_THEME=lucos
+      - AUTH_METHOD=oidc
+      - OIDC_ISSUER=${AITHNE_ORIGIN}
+      - OIDC_ISSUER_DISCOVER=true
+      - OIDC_CLIENT_ID=lucos_worlds
+      - OIDC_CLIENT_SECRET=${KEY_LUCOS_AITHNE}
+      - DB_HOST=lucos_worlds_db
+      - DB_DATABASE=bookstack
+      - DB_USERNAME=bookstack
+      - DB_PASSWORD
+      - PUID=1000
+      - PGID=1000
+    ports:
+      - "${PORT}:80"
+    volumes:
+      - web_storage:/config
+    depends_on:
+      lucos_worlds_db:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  lucos_worlds_db:
+    image: mariadb:11.4.12
+    container_name: lucos_worlds_db
+    environment:
+      - MARIADB_DATABASE=bookstack
+      - MARIADB_USER=bookstack
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_RANDOM_ROOT_PASSWORD=yes
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+volumes:
+  web_storage:
+  db_data:
