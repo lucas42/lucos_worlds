@@ -1,10 +1,123 @@
 /*
- * Placeholder stylesheet for the lucos_worlds "lucos" theme.
+ * The lucos_worlds "fantasy" theme.
  *
- * This file exists to prove the custom-CSS injection mechanism works
- * end-to-end (baked into the image -> synced into BookStack's persistent
- * /config volume -> served at /theme/lucos/css/custom.css -> linked from
- * custom-head.blade.php). The actual "fantasy" styling (parchment
- * background, cursive headings, etc.) is deliberately NOT here — it's
- * scoped to lucas42/lucos_worlds#7.
+ * Applied via BookStack's logical theme system (APP_THEME=lucos), wired up
+ * in lucas42/lucos_worlds#2. Designed and finessed against a running
+ * instance in lucas42/lucos_worlds#7 — see that issue/PR for screenshots
+ * and the rationale behind specific choices.
+ *
+ * Approach: reuse BookStack's own CSS custom properties (--color-*,
+ * --font-*) wherever they exist, rather than fighting its markup with
+ * !important overrides. That keeps this theme resilient to BookStack
+ * upgrades — see ADR-0001's note that the theme may need touch-ups across
+ * major BookStack versions, but variable-based overrides are the least
+ * fragile way to get there.
+ *
+ * Scope note: colour overrides are scoped to `:root:not(.dark-mode)`.
+ * BookStack's dark mode is untouched by this pass (falls back to stock
+ * BookStack colours) rather than shipping an unverified "dark parchment"
+ * palette — a light parchment card dropped into a dark shell would be a
+ * legibility/glare problem, not a themed one. Full dark-mode parity is a
+ * reasonable follow-up if lucas42 wants it, tracked separately.
  */
+
+/* ---------------------------------------------------------------------
+ * Fonts
+ *
+ * Headings use Cinzel, a display serif (Roman inscriptional letterforms)
+ * for the "fantasy title" feel the brief asks for. Deliberately NOT a
+ * script/cursive face: cursive letterforms have real legibility problems,
+ * especially for dyslexic readers and at the smaller heading sizes
+ * BookStack uses down to h5/h6. A display serif reads as "fantasy" just as
+ * well for the short strings headings actually are.
+ *
+ * Body text is left on BookStack's default system-font stack. It's what
+ * carries almost all reading load on this site, so it keeps the most
+ * road-tested, highest-legibility option rather than a decorative one.
+ * --------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+
+:root {
+  --font-heading: 'Cinzel', Georgia, 'Times New Roman', serif;
+}
+
+/* ---------------------------------------------------------------------
+ * Colour palette — warm parchment / aged-library tones.
+ * Every text-on-background pairing below is WCAG AA verified (>=4.5:1;
+ * most clear 7:1). See the PR description for the worked contrast figures.
+ * --------------------------------------------------------------------- */
+:root:not(.dark-mode) {
+  /* Surrounding "desk" area behind the header/sidebars. */
+  background-color: #e7ddc0;
+
+  /* Primary accent: header bar, buttons, focus outlines, default links. */
+  --color-primary: #5c3a22;
+  --color-primary-light: rgba(92, 58, 34, 0.15);
+  --color-link: #5c3a22;
+
+  /* Entity-type accents (book/chapter/page/shelf badges and labels) —
+     a small "library" palette: forest-green tomes, ochre chapters, plum
+     pages, oxblood shelves. Chosen to stay visually distinct from one
+     another and from the primary accent at a glance. */
+  --color-book: #2f5d3f;
+  --color-chapter: #8a5518;
+  --color-page: #5c3350;
+  --color-bookshelf: #7a2323;
+}
+
+:root:not(.dark-mode) body {
+  color: #3a2a1a;
+}
+
+/* ---------------------------------------------------------------------
+ * The reading surface: BookStack's page/book/chapter display card.
+ * This is deliberately the only place given the full parchment texture —
+ * list views, dashboard cards, and sidebars keep BookStack's plain cards
+ * so scanning a list of pages stays quick and uncluttered.
+ * --------------------------------------------------------------------- */
+:root:not(.dark-mode) .content-wrap.card {
+  background-color: #f7f0dc;
+  background-image:
+    radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.35), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(90, 60, 20, 0.10), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='4' seed='7' stitchTiles='stitch' result='noise'/%3E%3CfeColorMatrix in='noise' type='matrix' values='0 0 0 0 0.36  0 0 0 0 0.27  0 0 0 0 0.15  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+  border: 1px solid rgba(92, 58, 34, 0.18);
+  box-shadow: 0 2px 10px rgba(58, 42, 26, 0.18), inset 0 0 48px rgba(58, 42, 26, 0.07);
+}
+
+/* A small ornamental rule under top-level content headings — a nod to
+   illuminated-manuscript section breaks, kept subtle enough not to fight
+   with body text below it. */
+:root:not(.dark-mode) .page-content h1::after,
+:root:not(.dark-mode) .page-content h2::after {
+  content: '';
+  display: block;
+  width: 4em;
+  margin-top: 0.35em;
+  border-bottom: 2px solid rgba(92, 58, 34, 0.35);
+}
+
+/* In-content links: colour alone isn't a reliable way to signal "this is a
+   link" (WCAG 1.4.1), and BookStack's default only underlines on hover.
+   A soft underline on content links keeps them identifiable at rest
+   without looking like a normal blue hyperlink. Left off nav/header links,
+   which are already distinguished by position and iconography. */
+:root:not(.dark-mode) .page-content a {
+  text-decoration: underline;
+  text-decoration-color: rgba(92, 58, 34, 0.35);
+  text-underline-offset: 0.15em;
+}
+
+/* ---------------------------------------------------------------------
+ * Focus visibility
+ * BookStack ties its default focus outline colour to --color-primary
+ * already, so the new palette carries through automatically. Widening it
+ * slightly and making it solid (from the 1px dotted default) makes it
+ * easier to track when tabbing through pages with the keyboard.
+ * --------------------------------------------------------------------- */
+* {
+  outline-width: 2px;
+}
+*:focus {
+  outline-style: solid;
+}
