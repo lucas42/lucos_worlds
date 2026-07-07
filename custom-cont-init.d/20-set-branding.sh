@@ -33,7 +33,7 @@ ATTEMPTS=0
 MAX_ATTEMPTS=30
 until php /app/www/artisan tinker --execute="
     \$s = app(\BookStack\Settings\SettingService::class);
-    \$s->put('app-name', 'lucos_worlds');
+    \$s->put('app-name', 'lucOS Worlds');
     \$s->put('app-name-header', true);
     \$s->put('app-logo', '/theme/lucos/img/logo.png');
     echo 'lucos_worlds branding applied' . PHP_EOL;
