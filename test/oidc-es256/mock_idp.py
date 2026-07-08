@@ -46,6 +46,16 @@ USER_NAME = "Test User"
 _private_key = ec.generate_private_key(ec.SECP256R1())
 _public_numbers = _private_key.public_key().public_numbers()
 
+# Negative-path testing control (lucos-security review finding, PR #28): the
+# positive-path login flow alone can't catch "verification became too
+# permissive" — a regression in the wrong direction is exactly what an
+# ES256/RS256 patch touching signature-verification logic must not silently
+# introduce. This flag, set via a test-only control endpoint, makes the next
+# issued id_token's signature corrupted-but-well-formed, so the driver can
+# assert BookStack actually rejects it rather than just checking the happy
+# path succeeds.
+_tamper_next_token = False
+
 
 def b64u(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
@@ -128,7 +138,12 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "not_found"}, status=404)
 
     def do_POST(self):
+        global _tamper_next_token
         parsed = urlparse(self.path)
+        if parsed.path == "/test-control/tamper-next-token":
+            _tamper_next_token = True
+            self._json({"ok": True})
+            return
         if parsed.path == "/oauth2/token":
             # BookStack's OidcOAuthProvider hardcodes HttpBasicAuthOptionProvider
             # (see app/Access/Oidc/OidcService.php::getProvider()) — client
@@ -147,11 +162,25 @@ class Handler(BaseHTTPRequestHandler):
             if code != FIXED_CODE:
                 self._json({"error": "invalid_grant"}, status=400)
                 return
+
+            id_token = make_id_token()
+            if _tamper_next_token:
+                # Flip one byte in the signature (the last segment). The token
+                # remains well-formed (three valid base64url segments, valid
+                # header/payload JSON) — only the signature is wrong, so this
+                # exercises exactly the verification logic under test, not
+                # some unrelated parse failure.
+                header_b64, payload_b64, sig_b64 = id_token.split(".")
+                sig_bytes = bytearray(base64.urlsafe_b64decode(sig_b64 + "=="))
+                sig_bytes[0] ^= 0xFF
+                id_token = f"{header_b64}.{payload_b64}.{b64u(bytes(sig_bytes))}"
+                _tamper_next_token = False
+
             self._json({
                 "access_token": "test-access-token",
                 "token_type": "Bearer",
                 "expires_in": 3600,
-                "id_token": make_id_token(),
+                "id_token": id_token,
             })
         else:
             self._json({"error": "not_found"}, status=404)

@@ -61,6 +61,20 @@ class OidcJwtSigningKey
         }
 
         if ($key instanceof EC) {
+            // lucos-security review finding (lucas42/lucos_worlds#28): the JWK-array
+            // path (loadEcFromJwkArray()) restricts to P-256, but this path — the
+            // manual OIDC_PUBLIC_KEY/file:// config route BookStack itself
+            // documents as an alternative to discovery — did not. A PEM file could
+            // contain any EC curve phpseclib3 supports (e.g. secp384r1) and it
+            // would silently be accepted with no restriction. Currently dead code
+            // in lucos_worlds (OIDC_ISSUER_DISCOVER=true is always set, so this
+            // branch never executes), but it's one env var away from being live —
+            // keep both EC-loading paths equally restricted, same as upstream
+            // keeps both RSA-loading paths equally restricted to RS256.
+            if ($key->getCurve() !== 'secp256r1') {
+                throw new OidcInvalidKeyException("Only the P-256 curve is currently supported for EC keys. Found curve {$key->getCurve()}");
+            }
+
             $this->key = $key->withSignatureFormat('IEEE');
 
             return;
