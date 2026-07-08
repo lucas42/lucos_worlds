@@ -3,13 +3,13 @@
 - **Status:** Proposed
 - **Date:** 2026-07-08
 - **Deciders:** lucas42 (decision on lucas42/lucos_worlds#21, 2026-07-08), lucos-architect
-- **Related:** [ADR-0001 (adopt BookStack)](0001-adopt-bookstack.md); lucas42/lucos_worlds#21 (incident + decision of record); lucas42/lucos_worlds#26 (implementation); `lucos_aithne` ADR-0001 (ES256-only signing)
+- **Related:** [ADR-0001 (adopt BookStack)](0001-adopt-bookstack.md); lucas42/lucos_worlds#21 (incident + decision of record, with the ES256-only evidence); lucas42/lucos_worlds#26 (implementation)
 
 ## Context
 
 lucos_worlds adopts BookStack (ADR-0001), authenticating users via `lucos_aithne` over OIDC. On the first production verification, OIDC login returned HTTP 500 and nobody — including lucas42 — could log in.
 
-Root cause (verified against source, full detail on lucas42/lucos_worlds#21): **BookStack's OIDC hardcodes RSA/RS256-only key acceptance** in three independent places — `OidcProviderSettings::filterKeys()`, `OidcJwtWithClaims::validateTokenSignature()`, and `OidcJwtSigningKey` (which builds an RSA key from JWK `e`/`n` via `phpseclib3\Crypt\RSA`). **`lucos_aithne` signs id_tokens exclusively with ES256** (EC/P-256) by deliberate design (`lucos_aithne` ADR-0001; its live JWKS publishes a single EC key; `lucos_locations` already depends on this). BookStack therefore filters out 100% of aithne's keys, ends with an empty key set, and throws. This is not fixable by configuration (the manual `OIDC_PUBLIC_KEY` path enforces the same RSA check), and no BookStack release — including its `development` branch — supports ES256; the upstream ES256 request is unresolved and a community PR was closed unmerged.
+Root cause (verified against source, full detail on lucas42/lucos_worlds#21): **BookStack's OIDC hardcodes RSA/RS256-only key acceptance** in three independent places — `OidcProviderSettings::filterKeys()`, `OidcJwtWithClaims::validateTokenSignature()`, and `OidcJwtSigningKey` (which builds an RSA key from JWK `e`/`n` via `phpseclib3\Crypt\RSA`). **`lucos_aithne` signs id_tokens exclusively with ES256** (EC/P-256) by deliberate design — every signing site in aithne's `token.go`/`oidc.go` hardcodes ES256, its OIDC discovery advertises ES256 only, and its live JWKS publishes a single EC key (`lucos_locations` already depends on this). (This is enforced in aithne's code; it is not written up in an aithne ADR.) BookStack therefore filters out 100% of aithne's keys, ends with an empty key set, and throws. This is not fixable by configuration (the manual `OIDC_PUBLIC_KEY` path enforces the same RSA check), and no BookStack release — including its `development` branch — supports ES256; the upstream ES256 request is unresolved and a community PR was closed unmerged.
 
 Options considered (full weighing on lucas42/lucos_worlds#21): (1) patch BookStack's OIDC for ES256 in the wrapper; (2) `lucos_aithne` additionally publishes an RS256 key; (3a) a plain oauth2-proxy gate; (3b) a re-signing OIDC shim; (4) switch to an ES256-native tool.
 
