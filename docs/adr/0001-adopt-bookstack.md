@@ -73,10 +73,15 @@ Self-host **BookStack** in the lucos estate as the system `lucos_worlds`.
 > `OIDC_REMOVE_FROM_GROUPS=true`, and `lucos_auth_scopes` gained a `worlds:admin` scope.
 > Right-sized to a single scope for the single current user; `worlds:editor` /
 > `worlds:viewer` are deferred until a real second-privilege user appears
-> (default-deny). Two steps remain manual, outside this repo: granting `worlds:admin`
-> to lucas42's aithne principal, and BookStack-side role setup (a role matching the
-> `worlds:admin` claim value, default registration role set to none) via the BookStack
-> Admin Settings UI — there is no env var for either.
+> (default-deny). Two steps remain manual, outside this repo, via the BookStack Admin
+> Settings UI (there is no env var for either): granting `worlds:admin` to lucas42's
+> aithne principal, and setting the **External Auth ID** field on BookStack's existing
+> built-in **Admin** role to `worlds:admin` — reusing the existing Admin permission set
+> rather than hand-building a new role. `OIDC_REMOVE_FROM_GROUPS=true` replaces *all*
+> roles on every OIDC login, so doing these in the wrong order (or setting the default
+> registration role to none before the Admin-role mapping is proven working) risks
+> locking lucas42 out entirely. See [#17](https://github.com/lucas42/lucos_worlds/issues/17)
+> for the exact lock-out-safe sequence and verification checkpoints.
 
 ### 3. Deployment shape
 
