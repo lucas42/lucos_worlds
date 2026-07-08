@@ -8,6 +8,27 @@
 # the version in git so Dependabot can raise upgrade PRs, and gives a home
 # for the baked-in "lucos" theme.
 FROM lscr.io/linuxserver/bookstack:26.05.2
+ARG VERSION
+ENV VERSION=$VERSION
+
+# ES256/EC OIDC support patch (lucas42/lucos_worlds#26, decision in #21):
+# lucos_aithne signs exclusively with ES256 and publishes no RSA key, but
+# upstream BookStack's OIDC client is RSA/RS256-only by design (see
+# BookStackApp/BookStack#5390, open/unresolved as of 2026-07). These three
+# files patch BookStack's OIDC key filtering and signature verification to
+# also accept EC/ES256 — see the in-file comments for the exact rationale.
+# Unlike the theme files below, /app/www is NOT a persistent volume (only
+# /config is), so a plain build-time COPY is sufficient here — no
+# custom-cont-init runtime copy needed.
+#
+# This is a narrow, intentional fork of these 3 files, not a general
+# willingness to patch BookStack — see ADR-0002 (lucas42/lucos_worlds#27).
+# The integration test (test/oidc-es256/) exercises this patch end-to-end
+# against the real image and gates CI, specifically so a future Dependabot
+# BookStack version bump can't silently break it.
+COPY patches/Oidc/OidcProviderSettings.php /app/www/app/Access/Oidc/OidcProviderSettings.php
+COPY patches/Oidc/OidcJwtWithClaims.php /app/www/app/Access/Oidc/OidcJwtWithClaims.php
+COPY patches/Oidc/OidcJwtSigningKey.php /app/www/app/Access/Oidc/OidcJwtSigningKey.php
 
 # Theme source lives OUTSIDE /config on purpose: /config is a persistent
 # volume, so anything baked into the image under a /config-backed path would
@@ -21,4 +42,5 @@ COPY theme/lucos /theme-source/lucos
 # populates /config on first run) and before the app service starts —
 # see https://docs.linuxserver.io/general/container-customization/.
 COPY custom-cont-init.d/10-copy-theme.sh /custom-cont-init.d/10-copy-theme.sh
-RUN chmod +x /custom-cont-init.d/10-copy-theme.sh
+COPY custom-cont-init.d/20-set-branding.sh /custom-cont-init.d/20-set-branding.sh
+RUN chmod +x /custom-cont-init.d/10-copy-theme.sh /custom-cont-init.d/20-set-branding.sh
