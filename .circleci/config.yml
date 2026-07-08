@@ -25,17 +25,37 @@ jobs:
           command: |
             cd test/oidc-es256
             ./build-and-run.sh
+  test-oidc-alg-binding:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Run OIDC key-selection/alg-binding unit test
+          # Unit-level coverage for lucas42/lucos_worlds#29 (hardening
+          # follow-up to #26/#28): OidcJwtWithClaims::validateTokenSignature()
+          # binds candidate key selection to the token's declared alg, for
+          # both key shapes (JWK-array discovery keys and the file:// manual
+          # config path). No mock IdP or docker-compose stack needed here —
+          # just the real, patched image's own vendored PHPUnit + phpseclib3.
+          command: |
+            cd test/unit-oidc-alg-binding
+            ./build-and-run.sh
 workflows:
   version: 2
   build-deploy:
     jobs:
       - test-oidc-es256
+      - test-oidc-alg-binding
       - lucos/build:
           serial-group: << pipeline.project.slug >>/build/<< pipeline.git.branch >>
       - lucos/deploy-avalon:
           serial-group: deploy-avalon
           requires:
             - test-oidc-es256
+            - test-oidc-alg-binding
             - lucos/build
           filters:
             branches:

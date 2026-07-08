@@ -28,6 +28,16 @@ class OidcJwtSigningKey
     protected PublicKey $key;
 
     /**
+     * The JWT "alg" value this key is valid for verifying ("RS256" or "ES256").
+     * Set by whichever loading path constructs $this->key. Used by
+     * OidcJwtWithClaims to bind key selection to a token's declared alg — see
+     * lucas42/lucos_worlds#29 (RFC 8725 algorithm-confusion hygiene). This is
+     * the only reliable way to know a key's type for the file:// shape, since
+     * that shape can't be inspected before OidcJwtSigningKey loads it.
+     */
+    protected string $alg;
+
+    /**
      * Can be created either from a JWK parameter array or local file path to load a certificate from.
      * Examples:
      * 'file:///var/www/cert.pem'
@@ -76,6 +86,7 @@ class OidcJwtSigningKey
             }
 
             $this->key = $key->withSignatureFormat('IEEE');
+            $this->alg = 'ES256';
 
             return;
         }
@@ -85,6 +96,7 @@ class OidcJwtSigningKey
         }
 
         $this->key = $key->withPadding(RSA::SIGNATURE_PKCS1);
+        $this->alg = 'RS256';
     }
 
     /**
@@ -137,6 +149,7 @@ class OidcJwtSigningKey
         }
 
         $this->key = $key->withPadding(RSA::SIGNATURE_PKCS1);
+        $this->alg = 'RS256';
     }
 
     /**
@@ -168,6 +181,15 @@ class OidcJwtSigningKey
         // JWT ES256 signatures are raw R||S concatenated (IEEE P1363) format, not
         // the ASN.1 DER format phpseclib3's EC class defaults to.
         $this->key = $key->withSignatureFormat('IEEE');
+        $this->alg = 'ES256';
+    }
+
+    /**
+     * The JWT "alg" value this key is valid for verifying ("RS256" or "ES256").
+     */
+    public function alg(): string
+    {
+        return $this->alg;
     }
 
     /**

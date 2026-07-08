@@ -123,9 +123,37 @@ class OidcJwtWithClaims implements ProvidesClaims
         // to support lucos_aithne, which signs exclusively with ES256. Must stay in
         // sync with OidcProviderSettings::filterKeys() and OidcJwtSigningKey — all
         // three independently gate the same RSA-only restriction upstream.
-        if (!in_array($this->header['alg'], ['RS256', 'ES256'], true)) {
+        $declaredAlg = $this->header['alg'] ?? null;
+        if (!in_array($declaredAlg, ['RS256', 'ES256'], true)) {
             throw new OidcInvalidTokenException("Only RS256 and ES256 signature validation is supported. Token reports using {$this->header['alg']}");
         }
+
+        // lucos hardening patch (lucas42/lucos_worlds#29, follow-up to #26/#28):
+        // bind key selection to the token's declared alg rather than trying every
+        // available key regardless of type — RFC 8725 algorithm-confusion hygiene.
+        // Not currently exploitable (RSA/ECDSA verification can't cross-confuse,
+        // and there's no HMAC path here), but the whole point of this patch set is
+        // algorithm hygiene, so key *selection* should match, not just verification.
+        //
+        // $this->keys elements are either a JWK array (kty known upfront — the
+        // discovery path, what lucos_worlds actually uses) or a single file://
+        // path string (the manual OIDC_PUBLIC_KEY config path — dead code in
+        // lucos_worlds today, but must not be silently broken). A naive
+        // `$key['kty'] === ...` filter run across both shapes drops every string
+        // entry with no error (PHP array-access on a string emits only a warning
+        // and returns null) — so string entries are always kept as candidates
+        // here; their real type isn't knowable until OidcJwtSigningKey loads them,
+        // which is what the second, authoritative check below (post-construction,
+        // via the loaded key's own alg()) is for.
+        $candidateKeys = array_filter($this->keys, function ($key) use ($declaredAlg) {
+            if (!is_array($key)) {
+                return true;
+            }
+
+            $kty = $key['kty'] ?? null;
+
+            return ($declaredAlg === 'RS256' && $kty === 'RSA') || ($declaredAlg === 'ES256' && $kty === 'EC');
+        });
 
         $parsedKeys = array_map(function ($key) {
             try {
@@ -133,13 +161,20 @@ class OidcJwtWithClaims implements ProvidesClaims
             } catch (OidcInvalidKeyException $e) {
                 throw new OidcInvalidTokenException('Failed to read signing key with error: ' . $e->getMessage());
             }
-        }, $this->keys);
+        }, $candidateKeys);
 
         $parsedKeys = array_filter($parsedKeys);
 
         $contentToSign = $this->tokenParts[0] . '.' . $this->tokenParts[1];
         /** @var OidcJwtSigningKey $parsedKey */
         foreach ($parsedKeys as $parsedKey) {
+            // Authoritative check for the file:// shape (and a cheap confirmation
+            // for the JWK-array shape): only ever attempt verification with a key
+            // whose actual loaded type matches the token's declared alg.
+            if ($parsedKey->alg() !== $declaredAlg) {
+                continue;
+            }
+
             if ($parsedKey->verify($contentToSign, $this->signature)) {
                 return;
             }
