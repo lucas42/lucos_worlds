@@ -13,6 +13,14 @@ services:
       - OIDC_ISSUER_DISCOVER=true
       - OIDC_CLIENT_ID=lucos_worlds
       - OIDC_CLIENT_SECRET=${KEY_LUCOS_AITHNE}
+      # RBAC via BookStack's native OIDC group-role sync (lucos_worlds#17):
+      # aithne's id_token "scopes" claim is read as the group list, and
+      # BookStack matches each value to a role display name. Fixed, non-
+      # sensitive values — hardcoded here, no lucos_creds wiring needed.
+      - OIDC_USER_TO_GROUPS=true
+      - OIDC_GROUPS_CLAIM=scopes
+      - OIDC_ADDITIONAL_SCOPES=worlds:admin
+      - OIDC_REMOVE_FROM_GROUPS=true
       - DB_HOST=lucos_worlds_db
       - DB_DATABASE=bookstack
       - DB_USERNAME=bookstack
