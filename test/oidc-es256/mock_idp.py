@@ -109,6 +109,12 @@ class Handler(BaseHTTPRequestHandler):
                 "kid": "test-key-1", "x": x, "y": y,
             }]})
         elif parsed.path == "/oauth2/authorize":
+            # Note: BookStack's OAuth2 client does send PKCE params
+            # (code_challenge/code_challenge_method) here, but this mock does
+            # NOT validate them (or the corresponding code_verifier at the
+            # /oauth2/token exchange below) — that's out of scope for what
+            # this test verifies (the ES256 signature-verification patch),
+            # not a claim that PKCE round-tripping itself is covered.
             qs = parse_qs(parsed.query)
             redirect_uri = qs["redirect_uri"][0]
             state = qs.get("state", [""])[0]

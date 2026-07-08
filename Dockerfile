@@ -22,7 +22,7 @@ ENV VERSION=$VERSION
 # custom-cont-init runtime copy needed.
 #
 # This is a narrow, intentional fork of these 3 files, not a general
-# willingness to patch BookStack — see docs/adr/0002-patch-bookstack-for-es256-oidc.md.
+# willingness to patch BookStack — see ADR-0002 (lucas42/lucos_worlds#27).
 # The integration test (test/oidc-es256/) exercises this patch end-to-end
 # against the real image and gates CI, specifically so a future Dependabot
 # BookStack version bump can't silently break it.

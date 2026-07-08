@@ -1,16 +1,15 @@
 # Self-contained integration test stack for the ES256 OIDC patch
 # (lucas42/lucos_worlds#26, decision in #21). Entirely disposable — every
-# value here is test-only/dummy, never real creds. Run from this directory:
+# value here is test-only/dummy, never real creds. Run via ./build-and-run.sh
+# (NOT `docker compose up --build` directly — `web` needs a two-stage build,
+# see build-and-run.sh and web.Dockerfile for why).
 #
-#   docker compose up --build --abort-on-container-exit --exit-code-from driver
-#
-# `web` builds from the real repo Dockerfile (the actual patched image, not a
-# stand-in), so this exercises the genuine artifact that gets deployed.
+# `web` is built from the real repo Dockerfile (the actual patched image, not
+# a stand-in) plus a thin test-only layer that trusts the mock IdP's cert, so
+# this exercises the genuine artifact that gets deployed.
 services:
   web:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
+    image: ${LUCOS_WORLDS_WEB_TEST_IMAGE:?set by build-and-run.sh}
     environment:
       - PORT=80
       - APP_URL=http://web
@@ -27,13 +26,6 @@ services:
       - DB_PASSWORD=test-db-password-disposable
       - PUID=1000
       - PGID=1000
-    volumes:
-      # Test-harness-only: trusts the mock IdP's self-signed TLS cert so
-      # BookStack's real, unmodified TLS verification can complete discovery/
-      # JWKS/token-exchange calls to it. Never part of the production image —
-      # mounted here only, not COPY'd in the Dockerfile.
-      - ./mock_idp_cert.pem:/mock-idp-ca.pem:ro
-      - ./trust-mock-idp-ca.sh:/custom-cont-init.d/99-trust-mock-idp-ca.sh:ro
     depends_on:
       db:
         condition: service_healthy

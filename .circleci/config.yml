@@ -16,9 +16,15 @@ jobs:
           # load-bearing check from lucas42/lucos_worlds#26 — a future
           # Dependabot BookStack version-bump PR must fail here (not just
           # build) if it silently breaks the ES256 patch.
+          #
+          # Uses build-and-run.sh (a two-stage docker build), not a bare
+          # `docker compose up --build` — setup_remote_docker runs the Docker
+          # daemon on a separate remote host with no access to this job's
+          # checked-out files, so a docker-compose bind-mount (the original
+          # approach) silently resolves to an empty directory there.
           command: |
             cd test/oidc-es256
-            docker compose up --build --abort-on-container-exit --exit-code-from driver
+            ./build-and-run.sh
 workflows:
   version: 2
   build-deploy:
