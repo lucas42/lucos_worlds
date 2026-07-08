@@ -1,15 +1,35 @@
 version: 2.1
 orbs:
   lucos: lucos/deploy@0
+jobs:
+  test-oidc-es256:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Run ES256 OIDC integration test
+          # Drives the full login flow end-to-end against the real, patched
+          # BookStack image + a mock ES256-only OIDC provider. This is the
+          # load-bearing check from lucas42/lucos_worlds#26 — a future
+          # Dependabot BookStack version-bump PR must fail here (not just
+          # build) if it silently breaks the ES256 patch.
+          command: |
+            cd test/oidc-es256
+            docker compose up --build --abort-on-container-exit --exit-code-from driver
 workflows:
   version: 2
   build-deploy:
     jobs:
+      - test-oidc-es256
       - lucos/build:
           serial-group: << pipeline.project.slug >>/build/<< pipeline.git.branch >>
       - lucos/deploy-avalon:
           serial-group: deploy-avalon
           requires:
+            - test-oidc-es256
             - lucos/build
           filters:
             branches:

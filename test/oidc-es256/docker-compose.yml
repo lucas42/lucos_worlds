@@ -1,0 +1,72 @@
+# Self-contained integration test stack for the ES256 OIDC patch
+# (lucas42/lucos_worlds#26, decision in #21). Entirely disposable — every
+# value here is test-only/dummy, never real creds. Run from this directory:
+#
+#   docker compose up --build --abort-on-container-exit --exit-code-from driver
+#
+# `web` builds from the real repo Dockerfile (the actual patched image, not a
+# stand-in), so this exercises the genuine artifact that gets deployed.
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      - PORT=80
+      - APP_URL=http://web
+      - APP_KEY=base64:GlXqyfXH/t50P8LVvVj1vPqQXAYwzPyOf5yVO7EITDs=
+      - APP_THEME=lucos
+      - AUTH_METHOD=oidc
+      - OIDC_ISSUER=https://mock_idp:9000
+      - OIDC_ISSUER_DISCOVER=true
+      - OIDC_CLIENT_ID=lucos_worlds
+      - OIDC_CLIENT_SECRET=test-client-secret
+      - DB_HOST=db
+      - DB_DATABASE=bookstack
+      - DB_USERNAME=bookstack
+      - DB_PASSWORD=test-db-password-disposable
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      # Test-harness-only: trusts the mock IdP's self-signed TLS cert so
+      # BookStack's real, unmodified TLS verification can complete discovery/
+      # JWKS/token-exchange calls to it. Never part of the production image —
+      # mounted here only, not COPY'd in the Dockerfile.
+      - ./mock_idp_cert.pem:/mock-idp-ca.pem:ro
+      - ./trust-mock-idp-ca.sh:/custom-cont-init.d/99-trust-mock-idp-ca.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  db:
+    image: mariadb:11.4.12
+    environment:
+      - MARIADB_DATABASE=bookstack
+      - MARIADB_USER=bookstack
+      - MARIADB_PASSWORD=test-db-password-disposable
+      - MARIADB_RANDOM_ROOT_PASSWORD=yes
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  mock_idp:
+    build: .
+    command: ["python", "mock_idp.py"]
+
+  driver:
+    build: .
+    command: ["python", "driver.py"]
+    depends_on:
+      web:
+        condition: service_healthy
+      mock_idp:
+        condition: service_started
