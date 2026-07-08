@@ -40,3 +40,33 @@ attachments, and the synced theme copy).
 `base64:` followed by 32 random bytes (e.g. `openssl rand -base64 32`), not
 an arbitrary string. Laravel's encrypter rejects anything else at boot with
 `Unsupported cipher or incorrect key length`.
+
+## Local development auth
+
+BookStack's OIDC integration hard-requires the issuer (and every discovered
+endpoint) to be `https://`, checked in `OidcProviderSettings::validateInitial()`
+before any network call is made — there is no config toggle to relax it. In
+local dev, `lucos_aithne` normally runs over plain `http://localhost:8039`,
+which BookStack rejects outright with a generic "An unknown error occurred"
+in the UI (`InvalidArgumentException: Issuer value must start with https://`
+underneath).
+
+To work around this, dev BookStack's `AITHNE_ORIGIN` (`OIDC_ISSUER`) is set
+in lucos_creds to **prod** aithne (`https://aithne.l42.eu`) rather than the
+local dev instance. This means:
+
+- Discovery, JWKS, token exchange, and userinfo calls from dev BookStack go
+  out to prod aithne over the public internet.
+- The browser is redirected to prod aithne's authorize endpoint, so local
+  dev login authenticates against **prod aithne identities**, not a local
+  dev user set.
+- The localhost redirect URI (`http://localhost:8040/oidc/callback`) is
+  already registered on the prod `lucos_worlds` OIDC client — no separate
+  registration is needed for this to work.
+- The dev `KEY_LUCOS_AITHNE` client secret must match the secret prod
+  aithne holds for the `lucos_worlds` client, or token exchange fails after
+  redirect. This is a manual/production-side credential and needs
+  lucas42 to set it correctly.
+
+This coupling to prod identities is accepted as a trade-off in
+lucas42/lucos_worlds#35.
