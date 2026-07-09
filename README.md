@@ -30,6 +30,17 @@ Authentication is via `lucos_aithne` (OIDC), registered as an
 [ADR-0004](https://github.com/lucas42/lucos_aithne/blob/main/docs/adr/0004-oidc-client-registration.md)
 client in lucas42/lucos_aithne's `oidc_clients.json`.
 
+RBAC maps aithne's `worlds:admin` scope onto BookStack's built-in Admin
+role via BookStack's native OIDC group-role sync (`OIDC_USER_TO_GROUPS` and
+related vars in `docker-compose.yml`) — see the ADR-0001 amendment for the
+full design. The one piece BookStack has no env var for — setting the
+Admin role's **External Auth ID** field to `worlds:admin` — is applied
+automatically on every container start by
+`custom-cont-init.d/30-set-admin-role-auth-id.sh`, so a from-scratch
+deployment (e.g. disaster recovery) needs no manual database step. The
+only manual step left is granting `worlds:admin` to a principal in
+aithne's admin UI (`/admin/grants`).
+
 Two named volumes, registered in
 [`lucos_configy/config/volumes.yaml`](https://github.com/lucas42/lucos_configy/blob/main/config/volumes.yaml)
 per lucas42/lucos_configy#243: `lucos_worlds_db_data` (MariaDB data) and

@@ -73,15 +73,20 @@ Self-host **BookStack** in the lucos estate as the system `lucos_worlds`.
 > `OIDC_REMOVE_FROM_GROUPS=true`, and `lucos_auth_scopes` gained a `worlds:admin` scope.
 > Right-sized to a single scope for the single current user; `worlds:editor` /
 > `worlds:viewer` are deferred until a real second-privilege user appears
-> (default-deny). Two steps remain manual, outside this repo, via the BookStack Admin
-> Settings UI (there is no env var for either): granting `worlds:admin` to lucas42's
-> aithne principal, and setting the **External Auth ID** field on BookStack's existing
+> (default-deny). One step remains manual, outside this repo: granting
+> `worlds:admin` to lucas42's aithne principal (`/admin/grants`, production-only,
+> lucas42-only). Setting the **External Auth ID** field on BookStack's existing
 > built-in **Admin** role to `worlds:admin` — reusing the existing Admin permission set
-> rather than hand-building a new role. `OIDC_REMOVE_FROM_GROUPS=true` replaces *all*
-> roles on every OIDC login, so doing these in the wrong order (or setting the default
-> registration role to none before the Admin-role mapping is proven working) risks
-> locking lucas42 out entirely. See [#17](https://github.com/lucas42/lucos_worlds/issues/17)
-> for the exact lock-out-safe sequence and verification checkpoints.
+> rather than hand-building a new role — was originally a manual Admin Settings UI /
+> direct-database step (there is no env var for it), but is now automated on every
+> container start by `custom-cont-init.d/30-set-admin-role-auth-id.sh`, via BookStack's
+> own `Role` model rather than a hand-edited database row. `OIDC_REMOVE_FROM_GROUPS=true`
+> replaces *all* roles on every OIDC login, so the original rollout had to be sequenced
+> carefully to avoid locking lucas42 out entirely — see
+> [#17](https://github.com/lucas42/lucos_worlds/issues/17) for the lock-out-safe sequence
+> and verification checkpoints used for that one-off rollout (now moot for future/DR
+> deployments, since the Admin-role mapping is applied automatically before any login
+> can happen).
 
 ### 3. Deployment shape
 

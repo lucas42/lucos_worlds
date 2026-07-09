@@ -43,4 +43,5 @@ COPY theme/lucos /theme-source/lucos
 # see https://docs.linuxserver.io/general/container-customization/.
 COPY custom-cont-init.d/10-copy-theme.sh /custom-cont-init.d/10-copy-theme.sh
 COPY custom-cont-init.d/20-set-branding.sh /custom-cont-init.d/20-set-branding.sh
-RUN chmod +x /custom-cont-init.d/10-copy-theme.sh /custom-cont-init.d/20-set-branding.sh
+COPY custom-cont-init.d/30-set-admin-role-auth-id.sh /custom-cont-init.d/30-set-admin-role-auth-id.sh
+RUN chmod +x /custom-cont-init.d/10-copy-theme.sh /custom-cont-init.d/20-set-branding.sh /custom-cont-init.d/30-set-admin-role-auth-id.sh
