@@ -100,3 +100,55 @@ both and uses OIDC as normal.
 See lucas42/lucos_worlds#38 (supersedes the prod-aithne approach from
 lucas42/lucos_worlds#35) and lucas42/lucos_worlds#40 (creds/compose
 cleanup).
+
+## Data export
+
+Durability against data *loss* is already covered by `lucos_backups`
+(which backs up both named volumes below). This section is about
+*portability* — getting the underlying data out in a usable form, e.g. to
+inspect it directly or move it to another tool — and is a manual,
+occasional procedure, not an automated one (decision in
+lucas42/lucos_worlds#5).
+
+The two things that hold all worlds data are the same two volumes named in
+`docker-compose.yml`:
+
+- `db_data`, mounted at `/var/lib/mysql` in the `lucos_worlds_db` container
+  — the MariaDB `bookstack` database (all Books/Pages/Chapters, users,
+  settings).
+- `web_storage`, mounted at `/config` in the `lucos_worlds_web` container
+  — uploaded images and file attachments.
+
+### Option 1: full database dump + storage copy
+
+From the host running the stack (production runs on `avalon` — see
+`docs/adr/*` and `.circleci/config.yml`'s `deploy-avalon` job):
+
+```sh
+# Database — a plain SQL dump of the bookstack database
+docker exec lucos_worlds_db sh -c 'exec mysqldump -u bookstack -p"$MARIADB_PASSWORD" bookstack' > bookstack-dump.sql
+
+# File storage — uploaded images/attachments (tar the volume via a throwaway container
+# so this works the same whether or not the target host has direct access to Docker's
+# volume storage directory)
+docker run --rm -v lucos_worlds_web_storage:/config -v "$PWD":/backup alpine \
+    tar czf /backup/web-storage.tar.gz -C /config .
+```
+
+(`lucos_worlds_web_storage` is the full volume name registered in
+`lucos_configy/config/volumes.yaml` — Docker Compose prefixes the
+project name onto the short `web_storage` name from `docker-compose.yml`.)
+
+This gives a complete, tool-agnostic copy of everything BookStack holds.
+Restoring it means standing up a matching MariaDB + `/config` volume and
+loading the dump/tarball back in — the same shape of operation
+`lucos_backups` already performs for disaster recovery.
+
+### Option 2: BookStack's native per-item export
+
+For pulling out a single Book/Chapter/Page rather than everything, BookStack
+ships its own export feature directly in the UI — open any Book, Chapter,
+or Page and use its **Export** menu to download it as PDF, HTML, plain
+text, or Markdown. No schema-perfect round-trip is guaranteed (and none is
+required — lucas42/lucos#248), but Markdown output in particular is a
+reasonable starting point for moving specific content into another tool.
