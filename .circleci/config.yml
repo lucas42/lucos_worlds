@@ -43,12 +43,34 @@ jobs:
           command: |
             cd test/unit-oidc-alg-binding
             ./build-and-run.sh
+  test-info-endpoint:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Run /_info payload-mapping unit test
+          # Unit-level coverage for lucas42/lucos_worlds#6:
+          # InfoController::buildPayload() maps BookStack's
+          # database/cache/session health into the lucos /_info schema. No
+          # mock IdP or docker-compose stack needed here — just the real
+          # image's own vendored PHPUnit against InfoController.php exactly
+          # as shipped. The request-time wiring (route registration + live
+          # health checks against the real app/DB) is covered separately by
+          # test-oidc-es256, which asserts the live /_info response
+          # alongside its OIDC login checks.
+          command: |
+            cd test/unit-info-endpoint
+            ./build-and-run.sh
 workflows:
   version: 2
   build-deploy:
     jobs:
       - test-oidc-es256
       - test-oidc-alg-binding
+      - test-info-endpoint
       - lucos/build:
           serial-group: << pipeline.project.slug >>/build/<< pipeline.git.branch >>
       - lucos/deploy-avalon:
@@ -56,6 +78,7 @@ workflows:
           requires:
             - test-oidc-es256
             - test-oidc-alg-binding
+            - test-info-endpoint
             - lucos/build
           filters:
             branches:

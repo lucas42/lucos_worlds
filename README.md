@@ -41,6 +41,14 @@ deployment (e.g. disaster recovery) needs no manual database step. The
 only manual step left is granting `worlds:admin` to a principal in
 aithne's admin UI (`/admin/grants`).
 
+`lucos_worlds_web` serves the estate-wide `/_info` endpoint (consumed by
+`lucos_monitoring` and the `lucos_root` homepage) directly — no separate
+container or reverse proxy. It's registered via a small addition to the
+"lucos" theme (`theme/lucos/functions.php` + `InfoController.php`), using
+BookStack's own documented `ROUTES_REGISTER_WEB` theme hook rather than a
+core-file patch. It reports the same database/cache/session health BookStack's
+own `/status` route does. See lucas42/lucos_worlds#6.
+
 Two named volumes, registered in
 [`lucos_configy/config/volumes.yaml`](https://github.com/lucas42/lucos_configy/blob/main/config/volumes.yaml)
 per lucas42/lucos_configy#243: `lucos_worlds_db_data` (MariaDB data) and
