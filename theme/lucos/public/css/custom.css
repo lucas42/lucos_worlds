@@ -13,12 +13,34 @@
  * major BookStack versions, but variable-based overrides are the least
  * fragile way to get there.
  *
- * Scope note: colour overrides are scoped to `:root:not(.dark-mode)`.
- * BookStack's dark mode is untouched by this pass (falls back to stock
- * BookStack colours) rather than shipping an unverified "dark parchment"
- * palette — a light parchment card dropped into a dark shell would be a
- * legibility/glare problem, not a themed one. Full dark-mode parity is a
- * reasonable follow-up if lucas42 wants it, tracked separately.
+ * Dark mode: lucas42 asked whether the dark-mode option could be removed
+ * altogether. It can't — BookStack has no server-side setting to disable
+ * the toggle, and hiding the header button with CSS alone would strand
+ * anyone whose browser already has the dark-mode preference saved
+ * server-side (BookStack persists it per-user via POST
+ * /preferences/toggle-dark-mode) with no way to switch back. Instead the
+ * surfaces this theme fully controls — desk background, header, the
+ * reading-surface card, heading rule, content links — are given the exact
+ * same look in both modes, so pressing the toggle changes nothing there.
+ *
+ * That does NOT extend to --color-primary/--color-link themselves. Those
+ * two custom properties aren't just "our" header/link colour — BookStack's
+ * own compiled CSS reuses them as the foreground text colour on several
+ * native components we don't otherwise touch (e.g. the mobile Info/Content
+ * tab bar, `.text-link`/`.text-primary`). Point those variables at our very
+ * dark brown and every one of those native-dark-mode surfaces (BookStack's
+ * own `#222`/`#000` panels) goes to ~1.6:1 contrast — nowhere near AA.
+ * BookStack's own default blue (#206ea7) was evidently chosen to scrape by
+ * against both a light and a dark surface at once; our brown wasn't
+ * designed for that second job. So --color-primary/--color-link stay
+ * light-mode-only, and the header's background is set directly (see
+ * `.primary-background` below) rather than through the shared variable —
+ * that keeps the header on-brand in dark mode without dragging BookStack's
+ * own native dark chrome into the same trap. The trade-off: a few
+ * secondary bits of chrome we don't otherwise style (e.g. the mobile tab
+ * bar, the "back to top" button) keep BookStack's default blue accent in
+ * dark mode instead of our brown. That was flagged as a possible follow-up
+ * when this theme first shipped (see lucas42/lucos_worlds#7).
  */
 
 /* ---------------------------------------------------------------------
@@ -46,11 +68,18 @@
  * Every text-on-background pairing below is WCAG AA verified (>=4.5:1;
  * most clear 7:1). See the PR description for the worked contrast figures.
  * --------------------------------------------------------------------- */
-:root:not(.dark-mode) {
-  /* Surrounding "desk" area behind the header/sidebars. */
+:root:not(.dark-mode),
+:root.dark-mode {
+  /* Surrounding "desk" area behind the header/sidebars. Plain
+     background-color, not a custom property BookStack reuses elsewhere,
+     so it's safe to apply in both modes. */
   background-color: #e7ddc0;
+}
 
-  /* Primary accent: header bar, buttons, focus outlines, default links. */
+:root:not(.dark-mode) {
+  /* Primary accent: buttons, focus outlines, default links, and (via
+     `.primary-background` below) the header bar. Light-mode only — see
+     the file-level comment on why this doesn't extend to dark mode. */
   --color-primary: #5c3a22;
   --color-primary-light: rgba(92, 58, 34, 0.15);
   --color-link: #5c3a22;
@@ -65,7 +94,18 @@
   --color-bookshelf: #7a2323;
 }
 
-:root:not(.dark-mode) body {
+/* The header's background, set directly rather than through
+   --color-primary (see file-level comment) so dark mode gets the same
+   brown header without also recolouring BookStack's native dark-mode
+   chrome elsewhere. BookStack already sets the header's link text to a
+   near-white #eee in dark mode, which keeps solid contrast (8.7:1) against
+   this background without any change here. */
+:root.dark-mode .primary-background {
+  background-color: #5c3a22 !important;
+}
+
+:root:not(.dark-mode) body,
+:root.dark-mode body {
   color: #3a2a1a;
 }
 
@@ -75,7 +115,8 @@
  * list views, dashboard cards, and sidebars keep BookStack's plain cards
  * so scanning a list of pages stays quick and uncluttered.
  * --------------------------------------------------------------------- */
-:root:not(.dark-mode) .content-wrap.card {
+:root:not(.dark-mode) .content-wrap.card,
+:root.dark-mode .content-wrap.card {
   background-color: #f7f0dc;
   background-image:
     radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.35), transparent 55%),
@@ -89,7 +130,9 @@
    illuminated-manuscript section breaks, kept subtle enough not to fight
    with body text below it. */
 :root:not(.dark-mode) .page-content h1::after,
-:root:not(.dark-mode) .page-content h2::after {
+:root:not(.dark-mode) .page-content h2::after,
+:root.dark-mode .page-content h1::after,
+:root.dark-mode .page-content h2::after {
   content: '';
   display: block;
   width: 4em;
@@ -102,7 +145,8 @@
    A soft underline on content links keeps them identifiable at rest
    without looking like a normal blue hyperlink. Left off nav/header links,
    which are already distinguished by position and iconography. */
-:root:not(.dark-mode) .page-content a {
+:root:not(.dark-mode) .page-content a,
+:root.dark-mode .page-content a {
   text-decoration: underline;
   text-decoration-color: rgba(92, 58, 34, 0.35);
   text-underline-offset: 0.15em;
