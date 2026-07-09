@@ -128,6 +128,12 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             redirect_uri = qs["redirect_uri"][0]
             state = qs.get("state", [""])[0]
+            # CodeQL py/http-response-splitting (lucas42/lucos_worlds#44): reject
+            # CR/LF in values taken straight from the query string before they're
+            # used to build a raw Location header, so a `\r\n` can't split the
+            # HTTP response and inject arbitrary headers/body.
+            if "\r" in redirect_uri or "\n" in redirect_uri or "\r" in state or "\n" in state:
+                raise ValueError("redirect_uri/state must not contain CR or LF")
             location = f"{redirect_uri}?{urlencode({'code': FIXED_CODE, 'state': state})}"
             self.send_response(302)
             self.send_header("Location", location)
@@ -192,6 +198,9 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", 9000), Handler)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    # CodeQL py/insecure-protocol (lucas42/lucos_worlds#45): don't allow negotiating
+    # down to the deprecated/vulnerable TLSv1/TLSv1.1.
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.load_cert_chain(certfile="/certs/mock_idp_cert.pem", keyfile="/certs/mock_idp_key.pem")
     server.socket = ctx.wrap_socket(server.socket, server_side=True)
     print("[mock_idp] listening on :9000 (TLS)")
