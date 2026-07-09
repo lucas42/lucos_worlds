@@ -197,4 +197,4 @@ types-as-tags as the cost.
 3. **Data export** — a concrete export/verification mechanism (even if just a documented
    `mysqldump` + transform).
 4. **Monitoring / `/_info` gap** — decide how, or whether, `lucos_worlds` integrates with
-   `lucos_monitoring` given it cannot serve `/_info` natively.
+   `lucos_monitoring` given it cannot serve `/_info` natively. *(Resolved in ADR-0003.)*
