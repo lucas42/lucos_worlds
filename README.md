@@ -43,30 +43,34 @@ an arbitrary string. Laravel's encrypter rejects anything else at boot with
 
 ## Local development auth
 
-BookStack's OIDC integration hard-requires the issuer (and every discovered
-endpoint) to be `https://`, checked in `OidcProviderSettings::validateInitial()`
-before any network call is made — there is no config toggle to relax it. In
-local dev, `lucos_aithne` normally runs over plain `http://localhost:8039`,
-which BookStack rejects outright with a generic "An unknown error occurred"
-in the UI (`InvalidArgumentException: Issuer value must start with https://`
-underneath).
+Production uses `lucos_aithne` OIDC (see above). Local dev does **not** —
+BookStack hard-requires an `https://` OIDC issuer (checked in
+`OidcProviderSettings::validateInitial()` before any network call is made,
+with no config toggle to relax it), and dev `lucos_aithne` runs over plain
+`http://localhost:8039`, so OIDC login is rejected outright with a generic
+"An unknown error occurred" in the UI. Pointing dev at prod aithne instead
+was considered and rejected — it's blocked by the lucos_creds non-prod →
+prod guardrail, and it would place a working prod OIDC client secret in the
+dev environment.
 
-To work around this, dev BookStack's `AITHNE_ORIGIN` (`OIDC_ISSUER`) is set
-in lucos_creds to **prod** aithne (`https://aithne.l42.eu`) rather than the
-local dev instance. This means:
+Instead, dev uses BookStack's **standard auth**, controlled by
+`AUTH_METHOD` in `docker-compose.yml` (`${AUTH_METHOD:-oidc}` — defaults to
+`oidc` so production, which never sets this cred, can't accidentally fall
+open to standard auth). The dev environment sets `AUTH_METHOD=standard` in
+lucos_creds, and a fresh BookStack database auto-seeds a default admin on
+first migration:
 
-- Discovery, JWKS, token exchange, and userinfo calls from dev BookStack go
-  out to prod aithne over the public internet.
-- The browser is redirected to prod aithne's authorize endpoint, so local
-  dev login authenticates against **prod aithne identities**, not a local
-  dev user set.
-- The localhost redirect URI (`http://localhost:8040/oidc/callback`) is
-  already registered on the prod `lucos_worlds` OIDC client — no separate
-  registration is needed for this to work.
-- The dev `KEY_LUCOS_AITHNE` client secret must match the secret prod
-  aithne holds for the `lucos_worlds` client, or token exchange fails after
-  redirect. This is a manual/production-side credential and needs
-  lucas42 to set it correctly.
+```
+admin@admin.com / password
+```
 
-This coupling to prod identities is accepted as a trade-off in
-lucas42/lucos_worlds#35.
+This is dev-only and zero-config — no extra step beyond the `.env` fetch
+already required for `APP_KEY`/`DB_PASSWORD`. Dev does not exercise the
+real OIDC path; that's accepted since OIDC is verified working in
+production. The `OIDC_*` vars stay in `docker-compose.yml` and are ignored
+by BookStack under standard auth, so a developer who later stands up a
+local HTTPS dev aithne (e.g. via mkcert) can flip `AUTH_METHOD=oidc` with
+no rework.
+
+See lucas42/lucos_worlds#38 (supersedes the prod-aithne approach from
+lucas42/lucos_worlds#35).
