@@ -1,5 +1,6 @@
 """
-Integration test driver for lucas42/lucos_worlds#26 (ES256 OIDC support).
+Integration test driver for lucas42/lucos_worlds#26 (ES256 OIDC support),
+extended by lucas42/lucos_worlds#6 to also cover the `/_info` endpoint.
 
 Drives the FULL OIDC authorization-code login flow end-to-end against the
 real, patched BookStack image and a mock ES256-only OIDC provider — not a
@@ -7,12 +8,18 @@ unit test. This is the load-bearing check per #26: version numbers can't be
 trusted to reveal a break in the patched files, only an actual login
 succeeding proves the patch still works.
 
-Two scenarios, both required (lucos-security review, PR #28): a genuine
+Two OIDC scenarios, both required (lucos-security review, PR #28): a genuine
 ES256-signed token must be ACCEPTED, and a tampered one must be REJECTED.
 Checking only the happy path can't catch "verification became too
 permissive" — a fail-open regression, which is the worse direction for
 auth-verification code and exactly the kind of silent breakage this test
 suite exists to catch.
+
+A third scenario (#6) reuses this same already-running, already-migrated
+BookStack + DB to assert `/_info` returns the correct estate-wide schema and
+health — the "end-to-end OIDC login still works AND /_info returns the
+correct payload + health" acceptance criterion from #6, both halves covered
+by one running stack.
 
 Exits 0 on success, non-zero (with a diagnostic message) on any failure.
 """
@@ -128,6 +135,65 @@ def attempt_oidc_login():
     return authenticated, session
 
 
+def check_info_endpoint():
+    """
+    Covers the acceptance criterion on lucas42/lucos_worlds#6: `/_info` must
+    return the estate-wide lucos schema + accurate health, registered via
+    BookStack's theme ROUTES_REGISTER_WEB hook alongside the ES256 OIDC
+    patch under test here. Reusing this harness's already-running,
+    already-migrated BookStack + DB also doubles as a regression check that
+    registering the new route hasn't disturbed anything else in this image
+    (including OIDC).
+
+    Deliberately a fresh, unauthenticated request — ROUTES_REGISTER_WEB
+    registers /_info as public, and both lucos_monitoring and lucos_root
+    fetch it with no session, so this must never require login.
+    """
+    resp = requests.get(f"{BOOKSTACK_URL}/_info", timeout=10)
+    if resp.status_code != 200:
+        fail(
+            "GET /_info returned "
+            f"{resp.status_code} (must always be 200 -- ok:false inside "
+            f"checks signals an unhealthy dependency, not an API failure). "
+            f"Body: {resp.text[:500]}"
+        )
+
+    body = resp.json()
+    if body.get("system") != "lucos_worlds":
+        fail(f"/_info system field wrong: {body.get('system')!r}")
+
+    checks = body.get("checks", {})
+    if "bookstack" not in checks:
+        fail(f"/_info checks missing 'bookstack' key: {checks}")
+    if checks["bookstack"].get("ok") is not True:
+        fail(f"/_info reports unhealthy while BookStack is up and migrated: {checks['bookstack']}")
+
+    if body.get("metrics") != {}:
+        fail(f"/_info metrics should be {{}}, got: {body.get('metrics')}")
+    if body.get("title") != "Worlds":
+        fail(f"/_info title wrong: {body.get('title')!r}")
+    if body.get("show_on_homepage") is not True:
+        fail(f"/_info show_on_homepage should be true, got: {body.get('show_on_homepage')!r}")
+    if body.get("network_only") is not True:
+        fail(f"/_info network_only should be true, got: {body.get('network_only')!r}")
+    if body.get("start_url") != "/":
+        fail(f"/_info start_url wrong: {body.get('start_url')!r}")
+
+    # The correctness requirement the architect flagged: lucos_root builds an
+    # absolute icon URL straight from this path, so it must actually resolve.
+    icon_path = body.get("icon")
+    if not icon_path:
+        fail("/_info icon field missing")
+    icon_resp = requests.get(f"{BOOKSTACK_URL}{icon_path}", timeout=10)
+    if icon_resp.status_code != 200:
+        fail(
+            f"/_info icon path {icon_path!r} did not 200 (got {icon_resp.status_code}) "
+            "-- lucos_root needs this to render the homepage tile"
+        )
+
+    print(f"[driver] PASS: /_info returned the expected schema + health, icon {icon_path!r} resolves.")
+
+
 def main():
     wait_for_bookstack()
 
@@ -155,7 +221,11 @@ def main():
         )
     print("[driver] PASS: tampered ES256 signature was correctly rejected.")
 
-    print("[driver] PASS: full ES256 OIDC integration test succeeded (accept genuine, reject tampered).")
+    # --- Scenario 3: /_info returns the correct estate-wide payload + health. ---
+    print("[driver] Scenario 3: /_info endpoint")
+    check_info_endpoint()
+
+    print("[driver] PASS: full integration test succeeded (OIDC accept genuine, reject tampered; /_info correct).")
     sys.exit(0)
 
 
