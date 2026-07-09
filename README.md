@@ -72,5 +72,12 @@ by BookStack under standard auth, so a developer who later stands up a
 local HTTPS dev aithne (e.g. via mkcert) can flip `AUTH_METHOD=oidc` with
 no rework.
 
+The dev environment doesn't set `AITHNE_ORIGIN` or `KEY_LUCOS_AITHNE` at
+all — those OIDC-only creds were removed once dev moved to standard auth.
+`docker-compose.yml`'s `${AITHNE_ORIGIN:-}` / `${KEY_LUCOS_AITHNE:-}`
+defaults keep `docker compose up` warning-free either way. Production sets
+both and uses OIDC as normal.
+
 See lucas42/lucos_worlds#38 (supersedes the prod-aithne approach from
-lucas42/lucos_worlds#35).
+lucas42/lucos_worlds#35) and lucas42/lucos_worlds#40 (creds/compose
+cleanup).
