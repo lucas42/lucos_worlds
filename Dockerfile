@@ -30,6 +30,31 @@ COPY patches/Oidc/OidcProviderSettings.php /app/www/app/Access/Oidc/OidcProvider
 COPY patches/Oidc/OidcJwtWithClaims.php /app/www/app/Access/Oidc/OidcJwtWithClaims.php
 COPY patches/Oidc/OidcJwtSigningKey.php /app/www/app/Access/Oidc/OidcJwtSigningKey.php
 
+# Page auto-description patch (lucas42/lucos_worlds#52): a Page has no
+# manually-authored description like Book/Chapter/Bookshelf do — it's always
+# derived from the page's own rendered plain text, and upstream just takes
+# the first N characters of that. A page opening with a short summary
+# paragraph immediately followed by a list or table gets that list/table
+# content bled into its excerpt/og:description, since BookStack's HTML-to-
+# text conversion only puts a single newline between them. These two files
+# make Page::getExcerpt() (and the og:description tag, changed to reuse it
+# instead of its own separate truncation) stop at the first newline, so an
+# author's opening paragraph becomes the description with no bleed-through
+# — see the in-file comments for detail. Book/Chapter/Bookshelf are
+# untouched (Entity::getExcerpt() keeps its original behaviour for their
+# manually-authored descriptions), and search result previews are untouched
+# (SearchResultsFormatter needs the full page text to find query matches
+# wherever they fall).
+#
+# Same delivery mechanism and "narrow, intentional fork, not general
+# BookStack maintenance" framing as the ES256 OIDC patch above (ADR-0002) —
+# but a different domain (display logic, not security-critical auth code).
+# The unit test (test/unit-page-excerpt/) pins this against the real
+# patched image so a future Dependabot BookStack version bump can't
+# silently regress it.
+COPY patches/Entities/Page.php /app/www/app/Entities/Models/Page.php
+COPY patches/views/pages/show.blade.php /app/www/resources/views/pages/show.blade.php
+
 # Theme source lives OUTSIDE /config on purpose: /config is a persistent
 # volume, so anything baked into the image under a /config-backed path would
 # be shadowed forever after the first container start. The custom-init

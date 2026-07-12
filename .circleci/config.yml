@@ -64,6 +64,24 @@ jobs:
           command: |
             cd test/unit-info-endpoint
             ./build-and-run.sh
+  test-page-excerpt:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Run Page::getExcerpt() first-line unit test
+          # Unit-level coverage for lucas42/lucos_worlds#52:
+          # Page::getExcerpt() stops at the first newline in the page's
+          # auto-derived text before truncating, so a summary paragraph
+          # followed by a list/table doesn't bleed into the excerpt/
+          # og:description. No mock IdP or docker-compose stack needed here
+          # — just the real, patched image's own vendored PHPUnit.
+          command: |
+            cd test/unit-page-excerpt
+            ./build-and-run.sh
 workflows:
   version: 2
   build-deploy:
@@ -71,6 +89,7 @@ workflows:
       - test-oidc-es256
       - test-oidc-alg-binding
       - test-info-endpoint
+      - test-page-excerpt
       - lucos/build:
           serial-group: << pipeline.project.slug >>/build/<< pipeline.git.branch >>
       - lucos/deploy-avalon:
@@ -79,6 +98,7 @@ workflows:
             - test-oidc-es256
             - test-oidc-alg-binding
             - test-info-endpoint
+            - test-page-excerpt
             - lucos/build
           filters:
             branches:
