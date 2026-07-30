@@ -187,10 +187,17 @@
  * with no layout corruption, so it's worth re-checking on upgrade but
  * not worth guarding further.
  *
- * `.tri-layout-left` is already `grid-row: 2`, directly above
- * `.tri-layout-middle` (`grid-row: 3`) in BookStack's own narrow-viewport
- * grid, so revealing one sidebar section drops it into a strip above the
- * content with no repositioning needed.
+ * No row/order repositioning is needed to get the strip above the
+ * content: below this breakpoint `.tri-layout-left`'s parent,
+ * `.tri-layout-sides-content`, switches to `display: block` (making
+ * `.tri-layout-left`'s own `grid-row: 2` inert — it's not a grid item at
+ * this width). The actual ordering comes one level up, between
+ * `.tri-layout-container`'s two real grid items: `.tri-layout-sides`
+ * (`grid-row: 1`, holding both sidebars) and `.tri-layout-middle`
+ * (`grid-row: 3`, the content). So revealing a section inside the left
+ * sidebar already renders it above the content, in normal source order —
+ * see lucas42/lucos_worlds#56's comment thread for the corrected layout
+ * model.
  * --------------------------------------------------------------------- */
 @media screen and (max-width: 1000px) {
   /* Reveal the left sidebar wrapper that upstream hides wholesale... */
