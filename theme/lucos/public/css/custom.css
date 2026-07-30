@@ -214,6 +214,91 @@
     display: block;
     pointer-events: auto;
   }
+
+  /* -----------------------------------------------------------------
+   * Narrow-viewport favourite toggle (lucas42/lucos_worlds#58)
+   *
+   * Same problem as the tags strip above, mirrored on the right
+   * sidebar: favouriting a page normally means leaving the Content tab
+   * (upstream hides `.tri-layout-right-contents` wholesale below this
+   * breakpoint), finding the favourite action, tapping it, then
+   * tapping back — losing scroll position each time. lucas42 does this
+   * repeatedly, on a tablet, mid-session, so it needs to be reachable
+   * without leaving the page. Screen height is the scarce resource in
+   * split-screen, so this can't be an in-flow strip like the tags
+   * above — it has to float.
+   *
+   * This is more markup-coupled than the tags rule: it depends on
+   * `.tri-layout-right-contents`, `#actions`, `#actions .icon-list`
+   * and the `/favourites/` form action. The `:has()` guards below tie
+   * every reveal to the favourite form actually being present, so if a
+   * future BookStack upgrade restructures this markup, the rules
+   * simply stop matching and favouriting quietly goes back to living
+   * in the Info tab — no stripped-down Actions panel or floating empty
+   * box gets left behind. Worth re-checking these selectors on upgrade.
+   * --------------------------------------------------------------------- */
+
+  /* Reveal only the ancestor chain to the favourite form. display:
+     contents drops each ancestor's own box (including #actions' own
+     mb-xl margin) so nothing but the form renders. */
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]),
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions,
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions .icon-list {
+    display: contents;
+    pointer-events: auto;
+  }
+  /* Hide every sibling at each level — the Details panel next to
+     #actions, the "Actions" heading, and every other action in the
+     list (edit, copy, move, revisions, permissions, delete, watch,
+     export) — so only the favourite form ends up visible. */
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) > *:not(#actions),
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions > *:not(.icon-list),
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions .icon-list > *:not(form[action*="/favourites/"]) {
+    display: none;
+  }
+
+  /* The favourite form itself, repositioned as a fixed, thumb-reachable
+     pill — bottom-inline-start, so it doesn't collide with BookStack's
+     own `.back-to-top` (bottom-inline-end, z-index: 999). Coloured to
+     match `.back-to-top`'s own treatment (var(--color-primary) + white)
+     for a consistent floating-button language, including the same
+     light/dark-mode trade-off documented at the top of this file.
+     `!important` on the text/icon colour is required, not decorative —
+     upstream's own `.text-link` rule sets `color`/`fill: var(--color-link)
+     !important`, so a normal-weight override is silently discarded. */
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions .icon-list > form[action*="/favourites/"] {
+    display: block;
+    position: fixed;
+    inset-block-end: 16px;
+    inset-inline-start: 16px;
+    z-index: 6;
+    background-color: var(--color-primary);
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions .icon-list > form[action*="/favourites/"] button {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    min-height: 44px;
+    padding: 0.65em 1.1em;
+    color: #fff !important;
+  }
+  .tri-layout-container:not(.show-info) .tri-layout-right-contents:has(#actions form[action*="/favourites/"]) #actions .icon-list > form[action*="/favourites/"] button svg {
+    fill: #fff !important;
+  }
+
+  /* Stacking-order trap: .tri-layout-sides (z-index: 4, base rules in
+     _layout.scss) sits in a lower stacking context than
+     .tri-layout-middle (z-index: 5) — both are grid items, and
+     z-index applies to grid items even when statically positioned, so
+     each establishes its own stacking context. A position: fixed
+     descendant of .tri-layout-sides is painted within that context
+     regardless of where it's fixed on screen — without this, the
+     favourite pill renders behind the page content and is invisible. */
+  .tri-layout-container:not(.show-info) .tri-layout-sides:has(#actions form[action*="/favourites/"]) {
+    z-index: 6;
+  }
 }
 
 /* ---------------------------------------------------------------------
