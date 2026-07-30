@@ -165,3 +165,83 @@
 *:focus {
   outline-style: solid;
 }
+
+/* ---------------------------------------------------------------------
+ * Narrow-viewport tag visibility (lucas42/lucos_worlds#56)
+ *
+ * Below BookStack's own $bp-l breakpoint (1000px), the tri-layout
+ * collapses into two mutually-exclusive mobile tabs, "Info" and
+ * "Content" — so the left sidebar, and the tags it holds, is invisible
+ * while reading. That matters here because ADR-0001 makes
+ * `type=pc|npc|place` a *tag* convention: the tag is the item's type,
+ * not a footnote.
+ *
+ * This is deliberately the one markup-coupled exception to this file's
+ * usual approach (see file header) of reusing BookStack's CSS custom
+ * properties rather than fighting its markup — there's no variable-based
+ * way to move content between BookStack's own mobile tabs. It depends on
+ * `.tri-layout-container`, `.show-info`, `.tri-layout-left-contents` and
+ * `.tag-item`. If a future BookStack upgrade renames any of these, the
+ * rule below simply stops matching and tags quietly go back to living in
+ * the Info tab, exactly as they do today — this degrades gracefully,
+ * with no layout corruption, so it's worth re-checking on upgrade but
+ * not worth guarding further.
+ *
+ * `.tri-layout-left` is already `grid-row: 2`, directly above
+ * `.tri-layout-middle` (`grid-row: 3`) in BookStack's own narrow-viewport
+ * grid, so revealing one sidebar section drops it into a strip above the
+ * content with no repositioning needed.
+ * --------------------------------------------------------------------- */
+@media screen and (max-width: 1000px) {
+  /* Reveal the left sidebar wrapper that upstream hides wholesale... */
+  .tri-layout-container:not(.show-info) .tri-layout-left > .tri-layout-left-contents {
+    display: block;
+    pointer-events: auto;
+  }
+  /* ...then hide everything in it except the tags section — the book
+     tree, page nav and attachments stay Info-tab-only. */
+  .tri-layout-container:not(.show-info) .tri-layout-left-contents > * {
+    display: none;
+  }
+  .tri-layout-container:not(.show-info) .tri-layout-left-contents > section:has(.tag-item) {
+    display: block;
+    pointer-events: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * The `type` tag (pc/npc/place, ADR-0001) gets its own solid-colour chip
+ * so it reads apart from ordinary tags at a glance — not just on the
+ * narrow strip above, but everywhere tags are shown. Each recognised
+ * value gets a distinct hue, so a PC, an NPC and a Place are tellable
+ * apart without reading the label. Reuses the entity-colour custom
+ * properties already established above rather than introducing new
+ * hardcoded colours; --color-bookshelf (otherwise unused in this theme)
+ * is the fallback for any value other than pc/npc/place, so a typo still
+ * reads as "type" without being mistaken for one of the three real ones.
+ * --------------------------------------------------------------------- */
+.tag-item[data-name="type" i] {
+  border-color: transparent;
+  background-color: var(--color-bookshelf);
+  font-weight: 600;
+}
+.tag-item[data-name="type" i] .tag-value {
+  background-color: transparent;
+  border-inline-start-color: rgba(255, 255, 255, 0.4);
+}
+.tag-item[data-name="type" i] a,
+.tag-item[data-name="type" i] span {
+  color: #fff;
+}
+.tag-item[data-name="type" i] svg {
+  fill: #fff;
+}
+.tag-item[data-name="type" i][data-value="pc" i] {
+  background-color: var(--color-book);
+}
+.tag-item[data-name="type" i][data-value="npc" i] {
+  background-color: var(--color-chapter);
+}
+.tag-item[data-name="type" i][data-value="place" i] {
+  background-color: var(--color-page);
+}
