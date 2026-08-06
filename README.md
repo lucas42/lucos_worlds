@@ -28,9 +28,7 @@ Two services, defined in `docker-compose.yml`:
 
 Authentication is via `lucos_aithne` (OIDC), registered as a
 [`lucos_aithne` ADR-0004](https://github.com/lucas42/lucos_aithne/blob/main/docs/adr/0004-oidc-client-registration.md)
-client in lucas42/lucos_aithne's `oidc_clients.json`. (Qualified, because this
-repository now has an ADR-0004 of its own — ADR numbers are unique within a
-repository, not across the estate.)
+client in lucas42/lucos_aithne's `oidc_clients.json`.
 
 RBAC maps aithne's `worlds:admin` scope onto BookStack's built-in Admin
 role via BookStack's native OIDC group-role sync (`OIDC_USER_TO_GROUPS` and
