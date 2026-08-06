@@ -23,3 +23,15 @@ updates:
         update-types: [minor, patch]
       major:
         update-types: [major]
+
+  - package-ecosystem: "pip"
+    directory: "/test/oidc-es256"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-type: all
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
