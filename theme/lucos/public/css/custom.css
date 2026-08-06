@@ -153,17 +153,71 @@
 }
 
 /* ---------------------------------------------------------------------
- * Focus visibility
+ * Focus visibility (lucas42/lucos_worlds#63)
  * BookStack ties its default focus outline colour to --color-primary
  * already, so the new palette carries through automatically. Widening it
  * slightly and making it solid (from the 1px dotted default) makes it
  * easier to track when tabbing through pages with the keyboard.
+ *
+ * `!important` is required, not decorative: a universal selector has
+ * specificity (0,0,0), so a plain `*`/`*:focus` rule loses to any of the
+ * dozen-plus component-scoped `:focus` rules BookStack's own stylesheet
+ * defines (`.icon-list-item:focus`, `.card-footer-link:focus`,
+ * `.button:focus`, `.tab-container [role=tablist] button:focus`, etc. —
+ * confirmed against the compiled stylesheet, not guessed) — every one of
+ * those wins on specificity alone regardless of source order, which is
+ * exactly how the Actions sidebar ended up with a barely-visible 1px
+ * dotted grey outline instead of this rule's solid 2px brand one. Same
+ * "upstream wins on specificity" problem as the favourite-pill colour
+ * override in #58, same fix.
  * --------------------------------------------------------------------- */
 * {
-  outline-width: 2px;
+  outline-width: 2px !important;
 }
 *:focus {
-  outline-style: solid;
+  outline-style: solid !important;
+}
+
+/* A few of those same component rules also hardcode a fixed grey
+ * (#666) outline colour rather than reusing --color-primary as BookStack's
+ * own baseline `* { outline-color: var(--color-primary) }` rule does —
+ * so unlike outline-width/-style above, this doesn't just need to win,
+ * it needs a colour that's still legible wherever these components show
+ * up. `currentColor` (not a hardcoded brand colour) is deliberate: these
+ * items render on both the parchment sidebar (brown text, brown outline
+ * reads fine) and, since the narrow-viewport favourite pill in #58 is
+ * this exact same `.icon-list-item` class, on that pill's solid brown
+ * background too (white text there, so currentColor gives a white
+ * outline) — confirmed empirically, not assumed: a hardcoded brand-brown
+ * outline color measures ~1.75:1 against the pill's brown background,
+ * well under WCAG's 3:1 non-text minimum, while currentColor measures
+ * ~10:1 in that spot and ~7:1 on the parchment sidebar. Mirrors the
+ * `outline:1px dotted currentColor` pattern BookStack's own `.button:focus`
+ * rule already uses for the same reason. */
+.entity-list-item:focus,
+.icon-list-item:focus,
+.card-footer-link:focus,
+button.card-footer-link:focus {
+  outline-color: currentColor !important;
+}
+
+/* A handful of BookStack components deliberately suppress the outline
+   in favour of their own focus treatment (a border, a highlighted
+   pane, a blinking text cursor) rather than leaving it on by accident —
+   the blanket rule above would otherwise force a stray outline back
+   onto them. Preserved as `outline: none`, matching each component's
+   original (pre-!important) declaration; kept in one place rather than
+   interspersed so future audits (e.g. after a BookStack upgrade) have a
+   single list to re-check. */
+#markdown-editor #markdown-editor-input:focus,
+.outline > input:focus,
+.outline > input:active,
+.editor-content-area:focus,
+.popup-body:focus,
+.tab-container [role="tabpanel"].no-outline:focus,
+.dropdown-search-dropdown input:focus,
+header .search-box input:focus {
+  outline: none !important;
 }
 
 /* ---------------------------------------------------------------------
