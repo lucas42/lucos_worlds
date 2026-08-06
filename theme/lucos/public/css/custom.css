@@ -13,34 +13,51 @@
  * major BookStack versions, but variable-based overrides are the least
  * fragile way to get there.
  *
- * Dark mode: lucas42 asked whether the dark-mode option could be removed
- * altogether. It can't — BookStack has no server-side setting to disable
- * the toggle, and hiding the header button with CSS alone would strand
- * anyone whose browser already has the dark-mode preference saved
- * server-side (BookStack persists it per-user via POST
- * /preferences/toggle-dark-mode) with no way to switch back. Instead the
- * surfaces this theme fully controls — desk background, header, the
- * reading-surface card, heading rule, content links — are given the exact
- * same look in both modes, so pressing the toggle changes nothing there.
+ * Dark mode: REMOVED (lucas42/lucos_worlds#61). lucas42 asked once before
+ * (see #7) whether the toggle could be dropped altogether, and at the time
+ * it couldn't — but that "couldn't" turned out to be wrong. #61 found page
+ * headings rendering near-unreadable in dark mode (~1.7:1 contrast:
+ * BookStack's own upstream h1-h6 colour flips light in dark mode, but this
+ * theme deliberately keeps the reading card, and the desk behind it,
+ * identical in both modes — headings are the one element on that card
+ * whose foreground flips with no background of its own). Re-examined then:
+ * the toggle is a single Blade partial, shadowable via the same theme
+ * mechanism as every other override in this repo, and there is no
+ * `prefers-color-scheme` anywhere in BookStack's source — nothing can
+ * enter dark mode except that one partial's own form. See
+ * `theme/lucos/common/dark-mode-toggle.blade.php` (now empty) and
+ * `custom-cont-init.d/40-clear-dark-mode-preference.sh` (clears anyone's
+ * already-persisted preference, so removing the toggle alone can't strand
+ * someone who was already in dark mode) for the two-halves-that-ship-
+ * together mechanics, and #61 for the full options assessment.
  *
- * That does NOT extend to --color-primary/--color-link themselves. Those
+ * Practical effect: the six colour rule-blocks below that used to pair a
+ * `:not(.dark-mode)` and a `.dark-mode` selector setting the *same* value
+ * (desk background, body text, the reading card, the heading rule,
+ * content-link underlines) — #42's "identical in both modes" strategy —
+ * have been collapsed to their single unconditional selector, since the
+ * `.dark-mode` branch can now never match. One rule (the header
+ * background override) was dark-mode-*only* and is gone outright — light
+ * mode's header background already comes from BookStack's own generic
+ * `.primary-background` rule via `--color-primary` below, unaffected.
+ *
+ * --color-primary/--color-link (just below) are the one exception, left
+ * exactly as they were: still `:root:not(.dark-mode)`-scoped, even though
+ * that scoping is now vestigial (`.dark-mode` can't apply, so this already
+ * behaves as unconditional brown in every state a user can reach). That's
+ * deliberate, not an oversight — removing the scoping is a genuine, if now
+ * risk-free, behaviour statement ("BookStack's native dark-mode chrome —
+ * the mobile Info/Content tab bar, the back-to-top button — goes on-brand
+ * brown instead of upstream's blue"), and per the #61 assessment that's
+ * being kept as its own separately-reviewable follow-up rather than buried
+ * in this deletion. Original reasoning, still accurate background: those
  * two custom properties aren't just "our" header/link colour — BookStack's
  * own compiled CSS reuses them as the foreground text colour on several
- * native components we don't otherwise touch (e.g. the mobile Info/Content
- * tab bar, `.text-link`/`.text-primary`). Point those variables at our very
- * dark brown and every one of those native-dark-mode surfaces (BookStack's
- * own `#222`/`#000` panels) goes to ~1.6:1 contrast — nowhere near AA.
- * BookStack's own default blue (#206ea7) was evidently chosen to scrape by
- * against both a light and a dark surface at once; our brown wasn't
- * designed for that second job. So --color-primary/--color-link stay
- * light-mode-only, and the header's background is set directly (see
- * `.primary-background` below) rather than through the shared variable —
- * that keeps the header on-brand in dark mode without dragging BookStack's
- * own native dark chrome into the same trap. The trade-off: a few
- * secondary bits of chrome we don't otherwise style (e.g. the mobile tab
- * bar, the "back to top" button) keep BookStack's default blue accent in
- * dark mode instead of our brown. That was flagged as a possible follow-up
- * when this theme first shipped (see lucas42/lucos_worlds#7).
+ * native components this theme doesn't otherwise touch. Point them at our
+ * very dark brown and those native-dark-mode surfaces (BookStack's own
+ * `#222`/`#000` panels) go to ~1.6:1 contrast — nowhere near AA. That's
+ * exactly why the scoping existed; it's just that the surfaces it was
+ * protecting can no longer render.
  */
 
 /* ---------------------------------------------------------------------
@@ -68,11 +85,12 @@
  * Every text-on-background pairing below is WCAG AA verified (>=4.5:1;
  * most clear 7:1). See the PR description for the worked contrast figures.
  * --------------------------------------------------------------------- */
-:root:not(.dark-mode),
-:root.dark-mode {
+:root {
   /* Surrounding "desk" area behind the header/sidebars. Plain
-     background-color, not a custom property BookStack reuses elsewhere,
-     so it's safe to apply in both modes. */
+     background-color, not a custom property BookStack reuses elsewhere.
+     Unconditional since #61 — previously paired `:not(.dark-mode)`/
+     `.dark-mode` selectors setting this same value, now collapsed since
+     dark mode is unreachable (see file header). */
   background-color: #e7ddc0;
 }
 
@@ -94,19 +112,55 @@
   --color-bookshelf: #7a2323;
 }
 
-/* The header's background, set directly rather than through
-   --color-primary (see file-level comment) so dark mode gets the same
-   brown header without also recolouring BookStack's native dark-mode
-   chrome elsewhere. BookStack already sets the header's link text to a
-   near-white #eee in dark mode, which keeps solid contrast (8.7:1) against
-   this background without any change here. */
-:root.dark-mode .primary-background {
-  background-color: #5c3a22 !important;
+/* Was: a dark-mode-only header-background override, needed because
+   --color-primary (below) didn't reach dark mode. Removed outright since
+   #61 — dark mode is unreachable, so light mode's header background,
+   already correct via BookStack's own generic `.primary-background` rule
+   plus --color-primary, is now the only case that can ever render. */
+
+body {
+  /* Unconditional since #61, same reasoning as the desk background
+     above. */
+  color: #3a2a1a;
 }
 
-:root:not(.dark-mode) body,
-:root.dark-mode body {
-  color: #3a2a1a;
+/* ---------------------------------------------------------------------
+ * Removed dark-mode toggle (lucas42/lucos_worlds#61) — tidies for the two
+ * places its absence leaves an empty container behind. Both are BookStack
+ * markup this theme doesn't otherwise touch, so these fix the visible
+ * symptom in CSS rather than patching the views:
+ *
+ * - The header user-menu wraps the toggle in its own <li>, sitting between
+ *   two `<li role="presentation"><hr></li>` separators — emptied, it
+ *   reads as a redundant near-doubled divider rather than a menu item.
+ * - The homepage's (`resources/views/home/default.blade.php`) dark-mode
+ *   toggle is the *sole* child of its own `.icon-list` wrapper — emptied,
+ *   that div becomes an invisible box that still consumes layout space.
+ *
+ * `:not(:has(*))` — not `:empty` — because the emptied toggle partial
+ * still leaves whitespace behind (indentation between the removed form's
+ * old open/close tags), and `:empty` doesn't match an element containing
+ * a text node, even a whitespace-only one. `:has(*)` checks for element
+ * children specifically, which is what actually distinguishes "genuinely
+ * empty" from "has real content" here.
+ *
+ * `!important` alone isn't enough on the `.icon-list` case, and the
+ * selector spells out `.inline.block` rather than just `.icon-list` —
+ * confirmed empirically, not assumed, the same way the #63 focus-outline
+ * fix was: the homepage's wrapper also carries BookStack's own `.inline`
+ * and `.block` utility classes, and BookStack's `.block.inline{display:
+ * inline-block !important}` rule (two classes, specificity (0,2,0)) beats
+ * a plain `.icon-list:not(:has(*))` (0,1,0) even with `!important` on
+ * both sides — !important only re-enters the normal specificity/source-
+ * order cascade, it doesn't skip it. Matching `.inline.block` explicitly
+ * brings this selector to (0,3,0), clear of that. The `.dropdown-menu li`
+ * case doesn't have a same-specificity `!important` opponent, so it
+ * didn't need this, but keeping both `!important` here is the same
+ * "design the failure mode out up front" reasoning as #63, rather than
+ * waiting to rediscover it per selector. */
+.dropdown-menu li:not(:has(*)),
+.icon-list.inline.block:not(:has(*)) {
+  display: none !important;
 }
 
 /* ---------------------------------------------------------------------
@@ -115,8 +169,9 @@
  * list views, dashboard cards, and sidebars keep BookStack's plain cards
  * so scanning a list of pages stays quick and uncluttered.
  * --------------------------------------------------------------------- */
-:root:not(.dark-mode) .content-wrap.card,
-:root.dark-mode .content-wrap.card {
+.content-wrap.card {
+  /* Unconditional since #61, same reasoning as the desk background
+     above. */
   background-color: #f7f0dc;
   background-image:
     radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.35), transparent 55%),
@@ -129,10 +184,10 @@
 /* A small ornamental rule under top-level content headings — a nod to
    illuminated-manuscript section breaks, kept subtle enough not to fight
    with body text below it. */
-:root:not(.dark-mode) .page-content h1::after,
-:root:not(.dark-mode) .page-content h2::after,
-:root.dark-mode .page-content h1::after,
-:root.dark-mode .page-content h2::after {
+.page-content h1::after,
+.page-content h2::after {
+  /* Unconditional since #61, same reasoning as the desk background
+     above. */
   content: '';
   display: block;
   width: 4em;
@@ -145,8 +200,9 @@
    A soft underline on content links keeps them identifiable at rest
    without looking like a normal blue hyperlink. Left off nav/header links,
    which are already distinguished by position and iconography. */
-:root:not(.dark-mode) .page-content a,
-:root.dark-mode .page-content a {
+.page-content a {
+  /* Unconditional since #61, same reasoning as the desk background
+     above. */
   text-decoration: underline;
   text-decoration-color: rgba(92, 58, 34, 0.35);
   text-underline-offset: 0.15em;
