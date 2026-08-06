@@ -10,6 +10,9 @@ The founding design decision is recorded in [`docs/adr/0001-adopt-bookstack.md`]
 
 Originating brief and build-vs-adopt evaluation: lucas42/lucos#248.
 
+Writing NPC pages and stat blocks: [`docs/authoring-npcs.md`](docs/authoring-npcs.md)
+(decisions behind it in [`docs/adr/0005-npc-stat-blocks.md`](docs/adr/0005-npc-stat-blocks.md)).
+
 ## Deployment
 
 Two services, defined in `docker-compose.yml`:
