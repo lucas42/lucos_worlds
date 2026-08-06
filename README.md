@@ -4,7 +4,7 @@ A private, self-hosted worldbuilding system for TTRPGs and other fictional world
 
 Built by adopting [BookStack](https://www.bookstackapp.com/) behind `lucos_aithne`
 authentication, with worlds modelled as Books, items as Pages, and types
-(Player Character / NPC / Place) as tags.
+(Player Character / NPC / Place) as the Chapter a page sits in.
 
 The founding design decision is recorded in [`docs/adr/0001-adopt-bookstack.md`](docs/adr/0001-adopt-bookstack.md).
 
@@ -26,9 +26,11 @@ Two services, defined in `docker-compose.yml`:
   "fantasy" styling itself is tracked in lucas42/lucos_worlds#7.
 - `lucos_worlds_db` — MariaDB.
 
-Authentication is via `lucos_aithne` (OIDC), registered as an
-[ADR-0004](https://github.com/lucas42/lucos_aithne/blob/main/docs/adr/0004-oidc-client-registration.md)
-client in lucas42/lucos_aithne's `oidc_clients.json`.
+Authentication is via `lucos_aithne` (OIDC), registered as a
+[`lucos_aithne` ADR-0004](https://github.com/lucas42/lucos_aithne/blob/main/docs/adr/0004-oidc-client-registration.md)
+client in lucas42/lucos_aithne's `oidc_clients.json`. (Qualified, because this
+repository now has an ADR-0004 of its own — ADR numbers are unique within a
+repository, not across the estate.)
 
 RBAC maps aithne's `worlds:admin` scope onto BookStack's built-in Admin
 role via BookStack's native OIDC group-role sync (`OIDC_USER_TO_GROUPS` and
