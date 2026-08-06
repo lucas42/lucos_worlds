@@ -42,6 +42,13 @@ Self-host **BookStack** in the lucos estate as the system `lucos_worlds`.
 
 ### 1. Content model mapping (types-as-tags)
 
+> **Partially superseded by [ADR-0004](0004-item-types-as-chapters.md) (2026-08-06).**
+> The **Type** and **Place hierarchy** bullets below no longer describe the convention in
+> use: type is represented by the **Chapter** a page sits in, not by a `type=` tag, and
+> place hierarchy is represented by in-page links. The rest of this section (Book and Page
+> mappings) still stands. The original text is left intact deliberately — ADR-0004
+> explains why the choice changed, and that history is worth being able to read.
+
 - **World/universe** → a BookStack **Book** (a Shelf can group Books if a world grows
   large). Starting convention: one world = one Book.
 - **Item** (character/place) → a **Page** within the world's Book.
@@ -170,6 +177,9 @@ Self-host **BookStack** in the lucos estate as the system `lucos_worlds`.
   accident (tracked as deferred work).
 - **Types are a soft (tag) convention, not enforced** — mis-tagging is possible; fine for
   one disciplined user, would need revisiting if the tool became multi-user.
+  *(Largely retired by [ADR-0004](0004-item-types-as-chapters.md): chapters make type
+  structural within a Book, though nothing prevents a page being created loose in the Book
+  with no chapter at all.)*
 - **Custom CSS is cosmetic and version-coupled** — the theme may need touch-ups when
   BookStack makes major UI/markup changes across upgrades.
 - **Hard dependency on `lucos_aithne`** for all access — if aithne is down, `lucos_worlds`
