@@ -41,23 +41,40 @@
  * mode's header background already comes from BookStack's own generic
  * `.primary-background` rule via `--color-primary` below, unaffected.
  *
- * --color-primary/--color-link (just below) are the one exception, left
- * exactly as they were: still `:root:not(.dark-mode)`-scoped, even though
- * that scoping is now vestigial (`.dark-mode` can't apply, so this already
- * behaves as unconditional brown in every state a user can reach). That's
- * deliberate, not an oversight — removing the scoping is a genuine, if now
- * risk-free, behaviour statement ("BookStack's native dark-mode chrome —
- * the mobile Info/Content tab bar, the back-to-top button — goes on-brand
- * brown instead of upstream's blue"), and per the #61 assessment that's
- * being kept as its own separately-reviewable follow-up rather than buried
- * in this deletion. Original reasoning, still accurate background: those
- * two custom properties aren't just "our" header/link colour — BookStack's
- * own compiled CSS reuses them as the foreground text colour on several
- * native components this theme doesn't otherwise touch. Point them at our
- * very dark brown and those native-dark-mode surfaces (BookStack's own
- * `#222`/`#000` panels) go to ~1.6:1 contrast — nowhere near AA. That's
- * exactly why the scoping existed; it's just that the surfaces it was
- * protecting can no longer render.
+ * --color-primary/--color-link/--color-book/--color-chapter/--color-page/
+ * --color-bookshelf were the one exception #61 left `:root:not(.dark-mode)`
+ * -scoped rather than collapsing along with the six above: removing that
+ * scoping was a genuine behaviour statement in its own right ("BookStack's
+ * native dark-mode chrome — the mobile Info/Content tab bar, the
+ * back-to-top button, the narrow-viewport favourite pill (#58), native
+ * entity badges — goes on-brand brown instead of upstream's blue"), not
+ * pure tidying, so #61 deliberately left it as its own separately-
+ * reviewable follow-up (lucas42/lucos_worlds#76) instead of burying it in
+ * that deletion.
+ *
+ * Unconditional since #76 — via `:root, :root.dark-mode` rather than a
+ * bare `:root`, to hold its own against a same-specificity inline
+ * `:root.dark-mode` block BookStack renders in every page's own `<head>`
+ * (see that rule's own comment below for the mechanism; only found by
+ * checking a running instance, not by reading either stylesheet alone).
+ * Original reasoning, still worth keeping as background: these six custom
+ * properties aren't just "our" colours — BookStack's own compiled CSS
+ * reuses them as the foreground/background colour on several native
+ * components this theme doesn't otherwise touch, which is why pointing
+ * them at our very dark palette used to drop those native-dark-mode
+ * surfaces (BookStack's own `#222`/`#000` panels) to as low as ~1.6:1
+ * contrast — nowhere near AA. That's no longer a live risk in normal use:
+ * `.dark-mode` can't be reached through the UI since #61 (toggle removed,
+ * persisted preference cleared on every container start). The one residual
+ * path is a hand-crafted request straight to BookStack's still-registered
+ * `PATCH /preferences/toggle-dark-mode` route — already assessed and
+ * accepted as out of scope by #61 for a single-user private system, and
+ * unchanged by #76 in *reachability*. What #76 does change is that
+ * route's *consequence*: reached that way, `.dark-mode` now also
+ * reintroduces the ~1.6:1 contrast problem on those native surfaces,
+ * where before this change it wouldn't have. Worth recording precisely
+ * for that reason; not worth blocking on — same accepted trade-off as
+ * #61, its edge slightly sharper.
  */
 
 /* ---------------------------------------------------------------------
@@ -94,10 +111,24 @@
   background-color: #e7ddc0;
 }
 
-:root:not(.dark-mode) {
+:root, :root.dark-mode {
   /* Primary accent: buttons, focus outlines, default links, and (via
-     `.primary-background` below) the header bar. Light-mode only — see
-     the file-level comment on why this doesn't extend to dark mode. */
+     `.primary-background` below) the header bar. Unconditional since
+     #76 — see the file-level comment for why this now safely extends to
+     `.dark-mode` too (unreachable in normal use), and why `:root.dark-mode`
+     has to be spelled out explicitly rather than just `:root` alone:
+     BookStack renders its own `:root`/`:root.dark-mode` custom-property
+     pair inline in every page's `<head>` (`app-color`/`app-color-dark`
+     and siblings, `layouts/parts/custom-styles.blade.php`, defaulting to
+     its stock blue) — a bare `:root` here is only (0,1,0) specificity,
+     which loses outright to that inline block's own `:root.dark-mode`
+     (0,2,0) regardless of source order. Confirmed empirically, not
+     assumed: a plain `:root` rewrite here left the back-to-top button and
+     tab bar rendering BookStack's blue under a forced `.dark-mode` class,
+     silently. Matching the same `:root.dark-mode` selector restores
+     (0,2,0) parity, so this file's later `<link>` wins on source order,
+     the same way the original `:not(.dark-mode)` scoping did in the
+     light-mode case. */
   --color-primary: #5c3a22;
   --color-primary-light: rgba(92, 58, 34, 0.15);
   --color-link: #5c3a22;
