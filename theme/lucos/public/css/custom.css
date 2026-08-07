@@ -282,9 +282,12 @@ header .search-box input:focus {
  * Below BookStack's own $bp-l breakpoint (1000px), the tri-layout
  * collapses into two mutually-exclusive mobile tabs, "Info" and
  * "Content" — so the left sidebar, and the tags it holds, is invisible
- * while reading. That matters here because ADR-0001 makes
- * `type=pc|npc|place` a *tag* convention: the tag is the item's type,
- * not a footnote.
+ * while reading. ADR-0001 §1's `type=pc|npc|place` tag convention was
+ * withdrawn by ADR-0004 — item type is now represented by the Chapter a
+ * page sits in, not a tag — but the reveal below stays useful on its own
+ * terms: its selector is generic (`section:has(.tag-item)`), so it
+ * surfaces whatever tags a page happens to carry, not one fixed
+ * convention.
  *
  * This is deliberately the one markup-coupled exception to this file's
  * usual approach (see file header) of reusing BookStack's CSS custom
@@ -409,43 +412,6 @@ header .search-box input:focus {
   .tri-layout-container:not(.show-info) .tri-layout-sides:has(#actions form[action*="/favourites/"]) {
     z-index: 6;
   }
-}
-
-/* ---------------------------------------------------------------------
- * The `type` tag (pc/npc/place, ADR-0001) gets its own solid-colour chip
- * so it reads apart from ordinary tags at a glance — not just on the
- * narrow strip above, but everywhere tags are shown. Each recognised
- * value gets a distinct hue, so a PC, an NPC and a Place are tellable
- * apart without reading the label. Reuses the entity-colour custom
- * properties already established above rather than introducing new
- * hardcoded colours; --color-bookshelf (otherwise unused in this theme)
- * is the fallback for any value other than pc/npc/place, so a typo still
- * reads as "type" without being mistaken for one of the three real ones.
- * --------------------------------------------------------------------- */
-.tag-item[data-name="type" i] {
-  border-color: transparent;
-  background-color: var(--color-bookshelf);
-  font-weight: 600;
-}
-.tag-item[data-name="type" i] .tag-value {
-  background-color: transparent;
-  border-inline-start-color: rgba(255, 255, 255, 0.4);
-}
-.tag-item[data-name="type" i] a,
-.tag-item[data-name="type" i] span {
-  color: #fff;
-}
-.tag-item[data-name="type" i] svg {
-  fill: #fff;
-}
-.tag-item[data-name="type" i][data-value="pc" i] {
-  background-color: var(--color-book);
-}
-.tag-item[data-name="type" i][data-value="npc" i] {
-  background-color: var(--color-chapter);
-}
-.tag-item[data-name="type" i][data-value="place" i] {
-  background-color: var(--color-page);
 }
 
 /* ---------------------------------------------------------------------
