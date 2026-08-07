@@ -31,15 +31,34 @@
  * someone who was already in dark mode) for the two-halves-that-ship-
  * together mechanics, and #61 for the full options assessment.
  *
- * Practical effect: the six colour rule-blocks below that used to pair a
+ * Practical effect: the five colour rule-blocks below that used to pair a
  * `:not(.dark-mode)` and a `.dark-mode` selector setting the *same* value
  * (desk background, body text, the reading card, the heading rule,
  * content-link underlines) — #42's "identical in both modes" strategy —
- * have been collapsed to their single unconditional selector, since the
- * `.dark-mode` branch can now never match. One rule (the header
- * background override) was dark-mode-*only* and is gone outright — light
- * mode's header background already comes from BookStack's own generic
- * `.primary-background` rule via `--color-primary` below, unaffected.
+ * were collapsed to a single selector, on the reasoning that the
+ * `.dark-mode` branch can now never match so it's safe to drop. One rule
+ * (the header background override) was dark-mode-*only* and is gone
+ * outright — light mode's header background already comes from
+ * BookStack's own generic `.primary-background` rule via --color-primary
+ * below, unaffected.
+ *
+ * That reasoning about reachability was correct; "collapsed to a single
+ * unconditional selector" was not quite what it became. lucas42/lucos_worlds#80
+ * found that three of the five — desk background, body text, the reading
+ * card — collapsed to a *bare* selector (`:root`, `body`,
+ * `.content-wrap.card`) that loses to BookStack's own `html.dark-mode`-
+ * scoped native rules on specificity alone, the same bug class #76/#79
+ * found and fixed for --color-primary. Re-verified via #80 using the CSS
+ * OM directly (`document.styleSheets`, matching rules against the live
+ * element) rather than reading either stylesheet, since a plain text grep
+ * had already been shown, in #79, to truncate a compound selector and
+ * mislead about specificity once. Fixed the same way as #79: pair each
+ * bare selector with its explicit `:root.dark-mode`-scoped equivalent (see
+ * each rule below). The other two — the heading rule, content-link
+ * underlines — were checked the same way and confirmed to have no
+ * competing `.dark-mode`-scoped BookStack rule at all, so they're
+ * genuinely fine as bare selectors; each says so at its own rule now,
+ * rather than leaving that unstated.
  *
  * --color-primary/--color-link/--color-book/--color-chapter/--color-page/
  * --color-bookshelf were the one exception #61 left `:root:not(.dark-mode)`
@@ -102,12 +121,14 @@
  * Every text-on-background pairing below is WCAG AA verified (>=4.5:1;
  * most clear 7:1). See the PR description for the worked contrast figures.
  * --------------------------------------------------------------------- */
-:root {
+:root, :root.dark-mode {
   /* Surrounding "desk" area behind the header/sidebars. Plain
      background-color, not a custom property BookStack reuses elsewhere.
-     Unconditional since #61 — previously paired `:not(.dark-mode)`/
-     `.dark-mode` selectors setting this same value, now collapsed since
-     dark mode is unreachable (see file header). */
+     `:root.dark-mode` explicit since #80 — a bare `:root` (0,1,0) loses to
+     BookStack's own `html.dark-mode` (0,1,1); see the file-level comment
+     for the mechanism (same bug class as #76/#79's --color-primary fix,
+     confirmed here by inspecting the live cascade via `document.
+     styleSheets`, not by re-guessing from a grep). */
   background-color: #e7ddc0;
 }
 
@@ -149,9 +170,10 @@
    already correct via BookStack's own generic `.primary-background` rule
    plus --color-primary, is now the only case that can ever render. */
 
-body {
-  /* Unconditional since #61, same reasoning as the desk background
-     above. */
+body, :root.dark-mode body {
+  /* `:root.dark-mode body` explicit since #80, same reasoning as the desk
+     background above — BookStack's own `html.dark-mode body` (0,1,2)
+     otherwise wins over a bare `body` (0,0,1). */
   color: #3a2a1a;
 }
 
@@ -200,9 +222,11 @@ body {
  * list views, dashboard cards, and sidebars keep BookStack's plain cards
  * so scanning a list of pages stays quick and uncluttered.
  * --------------------------------------------------------------------- */
-.content-wrap.card {
-  /* Unconditional since #61, same reasoning as the desk background
-     above. */
+.content-wrap.card, :root.dark-mode .content-wrap.card {
+  /* `:root.dark-mode .content-wrap.card` explicit since #80, same
+     reasoning as the desk background above — BookStack's own
+     `html.dark-mode .card` (0,2,1) otherwise wins over a bare
+     `.content-wrap.card` (0,2,0). */
   background-color: #f7f0dc;
   background-image:
     radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.35), transparent 55%),
@@ -217,8 +241,10 @@ body {
    with body text below it. */
 .page-content h1::after,
 .page-content h2::after {
-  /* Unconditional since #61, same reasoning as the desk background
-     above. */
+  /* Unconditional since #61. Unlike the desk background/body text/reading
+     card above, this one is genuinely fine as a bare selector — checked
+     via #80, not assumed: no `.dark-mode`-scoped BookStack rule targets
+     this border at all, so there's no competing specificity to lose to. */
   content: '';
   display: block;
   width: 4em;
@@ -232,8 +258,11 @@ body {
    without looking like a normal blue hyperlink. Left off nav/header links,
    which are already distinguished by position and iconography. */
 .page-content a {
-  /* Unconditional since #61, same reasoning as the desk background
-     above. */
+  /* Unconditional since #61. Also genuinely fine as a bare selector,
+     checked via #80: BookStack's own compiled CSS has an identical,
+     unscoped `.page-content a { text-decoration: underline }` rule with
+     no `.dark-mode` variant — same specificity, later source order (this
+     file's `<link>` loads last), no competition either way. */
   text-decoration: underline;
   text-decoration-color: rgba(92, 58, 34, 0.35);
   text-underline-offset: 0.15em;
