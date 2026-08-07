@@ -447,3 +447,110 @@ header .search-box input:focus {
 .tag-item[data-name="type" i][data-value="place" i] {
   background-color: var(--color-page);
 }
+
+/* ---------------------------------------------------------------------
+ * NPC stat blocks (ADR-0005, lucas42/lucos_worlds#70)
+ *
+ * Structure, fixed by the ADR:
+ *   <details>
+ *     <summary>Name — Size Type · CR N</summary>
+ *     <p class="callout danger">AC … · Initiative … · HP … · Speed …</p>
+ *     <table>…ability scores…</table>
+ *     <p><strong>Skills</strong> …</p>
+ *     …
+ *   </details>
+ *
+ * `details:has(> p.callout.danger)` is the only way to identify a stat
+ * block from BookStack's native primitives — the `danger` callout
+ * category is reserved by convention (ADR-0005 §4) for the AC/
+ * Initiative/HP/Speed line, so it doubles as the hook. A bare `details`
+ * selector would style every collapsible section on the page. Graceful
+ * failure, matching this file's usual approach: if a future BookStack
+ * upgrade changes this markup, the selector simply stops matching and
+ * the block reverts to a stock collapsible section — no layout
+ * corruption, just plain.
+ *
+ * Distinct surface: a warm parchment tint, a brand-coloured frame and a
+ * summary title bar reusing --color-primary the same way the site
+ * header does — identifiable while scrolling without inventing new
+ * colours. Verified against white text: --color-primary (#5c3a22) on
+ * white is ~10:1, comfortably past WCAG AA.
+ * --------------------------------------------------------------------- */
+details:has(> p.callout.danger) {
+  border-width: 2px;
+  border-color: rgba(92, 58, 34, 0.45);
+  border-radius: 4px;
+  background-color: rgba(146, 94, 43, 0.06);
+  box-shadow: 0 1px 4px rgba(58, 42, 26, 0.15);
+}
+details:has(> p.callout.danger) > summary {
+  background-color: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-heading);
+  letter-spacing: 0.02em;
+}
+/* Focus visibility: the summary's background above is --color-primary,
+   the same colour BookStack's own baseline `* { outline-color:
+   var(--color-primary) }` rule uses by default — tabbing to a closed
+   stat block would otherwise draw an outline the same colour as the
+   surface it's outlining, i.e. invisible. Confirmed empirically with
+   Playwright (focus the summary, screenshot, compare before/after this
+   rule) rather than assumed. Same fix, same reasoning, as the
+   `.icon-list-item:focus` override further down for the favourite pill
+   (#58): currentColor resolves to the summary's own white text. */
+details:has(> p.callout.danger) > summary:focus {
+  outline-color: currentColor !important;
+}
+
+/* Dense internal spacing. BookStack's own `p, table { margin-bottom:
+   1.375em }` rhythm (theme/lucos not involved — it's upstream, sized
+   for body prose) is what makes the AC line, ability table and Skills/
+   Traits/Actions paragraphs read as spread-out body copy rather than
+   one dense reference block. */
+details:has(> p.callout.danger) > * {
+  margin-top: 0.2em;
+  margin-bottom: 0.5em;
+}
+details:has(> p.callout.danger) > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Compact ability table: reduced cell padding, centred values, and the
+   theme's display face on the header row. Scoped to `table` rather than
+   the ability table specifically — the ADR's structure has exactly one
+   table per stat block, so this can't catch anything else. */
+details:has(> p.callout.danger) table td,
+details:has(> p.callout.danger) table th {
+  padding: 2px 6px;
+  text-align: center;
+}
+details:has(> p.callout.danger) table th {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* Two columns above BookStack's own $bp-l breakpoint (1000px), single
+   column below. Unusually safe to make that call on viewport width
+   alone: stat blocks appear only in the DM-authored Book (ADR-0005 §2),
+   read on a laptop. Below the breakpoint is the tablet, used for the
+   player Book, where stat blocks don't appear at all — but the rule is
+   viewport-scoped rather than Book-scoped (BookStack gives no CSS hook
+   for "which Book"), so it degrades the same way if that ever changes:
+   single column, still legible, just less compact.
+   `column-span: all` keeps the identity line and the AC/HP line as a
+   full-width header above the two-column ability table and prose;
+   `break-inside: avoid` on every child stops the browser splitting the
+   ability table (or a single paragraph) across the column gap. */
+@media screen and (min-width: 1000px) {
+  details:has(> p.callout.danger) {
+    column-count: 2;
+    column-gap: 1.5em;
+  }
+  details:has(> p.callout.danger) > summary,
+  details:has(> p.callout.danger) > p.callout.danger {
+    column-span: all;
+  }
+  details:has(> p.callout.danger) > * {
+    break-inside: avoid;
+  }
+}
