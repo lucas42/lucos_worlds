@@ -7,7 +7,7 @@
 # keeps the estate's lucas42/lucos_<project>_<role> image convention, pins
 # the version in git so Dependabot can raise upgrade PRs, and gives a home
 # for the baked-in "lucos" theme.
-FROM lscr.io/linuxserver/bookstack:26.05.3
+FROM lscr.io/linuxserver/bookstack:26.05.4
 ARG VERSION
 ENV VERSION=$VERSION
 
