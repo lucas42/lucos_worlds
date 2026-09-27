@@ -129,7 +129,8 @@ discarded on save (ADR-0005 §4).
 6. Skills / Senses / Languages / Gear / Spellcasting as ordinary paragraphs, label in bold.
 7. **Traits / Actions / Bonus Actions as bold paragraphs — not headings.** See below.
 
-Other collapsible-block controls: **Toggle open/closed** (leave it closed) and **Unwrap**
+Other collapsible-block controls: **Toggle open/closed** (doesn't matter which for a stat
+block — the theme always renders it expanded, lucas42/lucos_worlds#91) and **Unwrap**
 (dissolves the block, keeping its contents).
 
 ### Conventions you can't see from the markup

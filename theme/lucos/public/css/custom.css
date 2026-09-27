@@ -580,3 +580,34 @@ details:has(> p.callout.danger) table th {
     break-inside: avoid;
   }
 }
+
+/* Always expanded, no collapse step (lucas42/lucos_worlds#91). Gated on
+ * `::details-content` support (Chrome 131+/Firefox 143+/Safari 18.4+, per
+ * caniuse) via `@supports selector(...)`, which fails closed on an older
+ * browser: the block just keeps today's native collapse/expand, not a
+ * broken dead end. Verified in Chromium (Playwright): a stat block
+ * authored closed renders fully expanded with an identical accessibility
+ * tree to a genuine `<details open>`; a stray click/Enter on the summary
+ * still silently flips the underlying `open` attribute but has zero
+ * visible effect, since the override below doesn't condition on it. No
+ * page or template re-authoring needed, existing or future.
+ * `pointer-events: none` was tried and dropped -- it also blocks mouse
+ * text-selection of the summary line, which isn't needed once the content
+ * override already makes a click a no-op. */
+@supports selector(::details-content) {
+  details:has(> p.callout.danger) > summary {
+    list-style: none;
+    cursor: text;
+  }
+  details:has(> p.callout.danger) > summary::-webkit-details-marker {
+    display: none;
+  }
+  details:has(> p.callout.danger) > summary::marker {
+    content: "";
+  }
+  details:has(> p.callout.danger)::details-content {
+    content-visibility: visible !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
