@@ -1,0 +1,49 @@
+# Disposable stack for the page-render smoke test (lucas42/lucos_worlds#99).
+# Every value is test-only. `web` is the real patched image (see
+# build-and-run.sh) with BookStack's built-in standard auth, since only page
+# rendering is under test here (OIDC login is covered by test/oidc-es256).
+services:
+  web:
+    image: ${LUCOS_WORLDS_WEB_TEST_IMAGE:?set by build-and-run.sh}
+    environment:
+      - PORT=80
+      - APP_URL=http://web
+      - APP_KEY=base64:GlXqyfXH/t50P8LVvVj1vPqQXAYwzPyOf5yVO7EITDs=
+      - APP_THEME=lucos
+      - AUTH_METHOD=standard
+      - DB_HOST=db
+      - DB_DATABASE=bookstack
+      - DB_USERNAME=bookstack
+      - DB_PASSWORD=test-db-password-disposable
+      - PUID=1000
+      - PGID=1000
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  db:
+    image: mariadb:11.4.12
+    environment:
+      - MARIADB_DATABASE=bookstack
+      - MARIADB_USER=bookstack
+      - MARIADB_PASSWORD=test-db-password-disposable
+      - MARIADB_RANDOM_ROOT_PASSWORD=yes
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  driver:
+    build: .
+    command: ["python", "driver.py"]
+    depends_on:
+      web:
+        condition: service_healthy
