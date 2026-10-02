@@ -82,6 +82,24 @@ jobs:
           command: |
             cd test/unit-page-excerpt
             ./build-and-run.sh
+  test-render-page:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Run page-render smoke test
+          # lucas42/lucos_worlds#99: creates a book and page in the real,
+          # patched image and GETs it, asserting a 200, both sidebars and
+          # the og:description excerpt. Nothing else renders a page, so a
+          # base-image bump that breaks a patched view (or a view it
+          # depends on) would otherwise pass CI and 500 in production
+          # (lucas42/lucos#315).
+          command: |
+            cd test/render-page
+            ./build-and-run.sh
 workflows:
   version: 2
   build-deploy:
@@ -90,6 +108,7 @@ workflows:
       - test-oidc-alg-binding
       - test-info-endpoint
       - test-page-excerpt
+      - test-render-page
       - lucos/build:
           serial-group: << pipeline.project.slug >>/build/<< pipeline.git.branch >>
       - lucos/deploy-avalon:
@@ -99,6 +118,7 @@ workflows:
             - test-oidc-alg-binding
             - test-info-endpoint
             - test-page-excerpt
+            - test-render-page
             - lucos/build
           filters:
             branches:
